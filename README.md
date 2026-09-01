@@ -68,12 +68,13 @@ Partner Centerの制限付き機能の説明には、`runFullTrust`を「DualSen
 - Bluetooth実機試験では、マイクON中にWindowsのWinMMジョイスティック状態を534回読み取り、軸ずれ・誤ボタン・読取エラーはいずれも0でした。
 - 開発用の共存診断ツールは、Bluetoothマイク取得中にWinMMとDirectInputを同時かつ非排他的に監視します。DirectInputでの実機結果、およびSteam Input・FF14を起動した状態での最終確認は未完了です。実行手順は`tools/GameInputInterferenceProbe/README.md`にあります。
 - `run-coexistence-test.ps1`はBaseline・Steam・FF14の前提条件を確認して同じ診断を実行し、比較可能な時刻付きログを`artifacts/hardware`へ保存します。
+- `run-accessibility-test.ps1 -ExecutablePath <DualSenseVoice.exe>`は、UI Automationの状態読み上げイベントと文字起こし欄のコピー操作を実アプリで検証し、テスト前のクリップボード内容を終了時に復元します。
 - 接続状態を3秒ごとに確認し、切断・再接続後はアプリ側も自動的に接続し直します。
 - 音声入力中にBluetoothが切れても即時検出し、そこまで受信できた音声は文字起こししてから再接続待ちへ戻ります。
 - Bluetooth直接入力中の本体マイクLEDは点灯しません。開始は上昇音、終了は下降音と画面表示で通知します。
 - キーボードフォーカス、Windowsのハイコントラスト配色、UI Automationの日本語ラベルに対応し、録音・変換・エラーなどの状態変化はスクリーンリーダーへ通知します。
 - アプリは1プロセスだけ動作します。スタートメニューなどから再度起動すると、既存ウィンドウを前面へ戻します。
-- 自動貼り付けはクリップボードとWin32 `SendInput`を使います。管理者権限で動くアプリには、通常権限の本アプリから貼り付けできません。
+- 自動貼り付けはクリップボードとWin32 `SendInput`を使います。音声入力開始前のウィンドウが現存し、実際に前面へ戻った場合だけ`Ctrl+V`を送ります。確認できない場合は別アプリへ誤入力せず、結果をクリップボードへ残します。管理者権限で動くアプリには、通常権限の本アプリから貼り付けできません。
 - Steam、DS4Windows、DSXなどが同じコントローラーへ出力していると音声クロックが競合する場合があります。録音できない場合は、それらを終了して「再読込」してください。
 - 配布物には、モデル・Whisper.net・NAudio・Concentus・HidSharp・.NETランタイムのライセンス本文と第三者通知を`Licenses`フォルダーへ同梱します。
 - 初回取得するWhisper baseモデルは、ファイル長とSHA-256を検証してから保存します。

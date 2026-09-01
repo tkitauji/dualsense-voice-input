@@ -55,7 +55,23 @@ modelHash[0] ^= 0xFF;
 Assert(!MainWindow.IsExpectedModel(MainWindow.ExpectedModelLength, modelHash),
     "A Whisper model with a different SHA-256 should be rejected.");
 
-Console.WriteLine("PASS|Bluetooth/USB button parsing, status-cue WAV, and model integrity");
+var intendedWindow = new IntPtr(0x101);
+var ownWindow = new IntPtr(0x202);
+Assert(MainWindow.IsSafePasteTarget(
+        intendedWindow, ownWindow, intendedWindow, targetExists: true),
+    "Paste should be allowed only after the intended target is foreground.");
+Assert(!MainWindow.IsSafePasteTarget(
+        intendedWindow, ownWindow, new IntPtr(0x303), targetExists: true),
+    "Paste must be rejected when a different window is foreground.");
+Assert(!MainWindow.IsSafePasteTarget(
+        intendedWindow, ownWindow, intendedWindow, targetExists: false),
+    "Paste must be rejected after the target window has closed.");
+Assert(!MainWindow.IsSafePasteTarget(
+        ownWindow, ownWindow, ownWindow, targetExists: true),
+    "Paste must not be sent back into the app itself.");
+
+Console.WriteLine(
+    "PASS|Bluetooth/USB button parsing, status-cue WAV, model integrity, and paste-target safety");
 
 static void Assert(bool condition, string message)
 {

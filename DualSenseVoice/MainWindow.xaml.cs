@@ -440,15 +440,25 @@ public partial class MainWindow : Window
                 text.Append(segment.Text);
 
             TranscriptBox.Text = text.ToString().Trim();
-            SetStatus(TranscriptBox.Text.Length == 0
+            string completionStatus = TranscriptBox.Text.Length == 0
                 ? connectionLost
                     ? "接続が切れました — 受信済み音声を認識できませんでした"
                     : "ミュート中 — 音声を認識できませんでした"
                 : connectionLost
                     ? "接続が切れました — 受信済み音声の文字起こしは完了しました"
-                    : "ミュート中 — 文字起こし完了。もう一度押すと話せます");
+                    : "ミュート中 — 文字起こし完了。もう一度押すと話せます";
             if (AutoPasteBox.IsChecked == true && TranscriptBox.Text.Length > 0)
-                PasteToPreviousWindow();
+            {
+                AutomaticPasteResult result = await PasteToPreviousWindowAsync();
+                completionStatus += result switch
+                {
+                    AutomaticPasteResult.Pasted => " 自動貼り付けしました。",
+                    AutomaticPasteResult.ClipboardOnly =>
+                        " 自動貼り付けできなかったため、クリップボードにコピーしました。",
+                    _ => " 自動貼り付けできませんでした。画面の結果をコピーしてください。",
+                };
+            }
+            SetStatus(completionStatus);
         }
         catch (Exception ex)
         {
@@ -473,14 +483,26 @@ public partial class MainWindow : Window
         recordingPath = null;
     }
 
-    void PasteToPreviousWindow()
+    async Task<AutomaticPasteResult> PasteToPreviousWindowAsync()
     {
-        System.Windows.Clipboard.SetText(TranscriptBox.Text);
+        if (!await TrySetClipboardTextAsync(TranscriptBox.Text))
+            return AutomaticPasteResult.ClipboardUnavailable;
+
+        IntPtr ownWindow = new WindowInteropHelper(this).Handle;
         if (previousWindow == IntPtr.Zero ||
-            previousWindow == new WindowInteropHelper(this).Handle)
-            return;
+            previousWindow == ownWindow ||
+            !IsWindow(previousWindow))
+            return AutomaticPasteResult.ClipboardOnly;
 
         SetForegroundWindow(previousWindow);
+        await Task.Delay(100);
+        if (!IsSafePasteTarget(
+                previousWindow,
+                ownWindow,
+                GetForegroundWindow(),
+                IsWindow(previousWindow)))
+            return AutomaticPasteResult.ClipboardOnly;
+
         var inputs = new[]
         {
             Key(0x11, false),
@@ -488,7 +510,41 @@ public partial class MainWindow : Window
             Key(0x56, true),
             Key(0x11, true),
         };
-        SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<INPUT>());
+        uint sent = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<INPUT>());
+        return sent == inputs.Length
+            ? AutomaticPasteResult.Pasted
+            : AutomaticPasteResult.ClipboardOnly;
+    }
+
+    internal static bool IsSafePasteTarget(
+        IntPtr intendedWindow,
+        IntPtr ownWindow,
+        IntPtr foregroundWindow,
+        bool targetExists) =>
+        intendedWindow != IntPtr.Zero &&
+        intendedWindow != ownWindow &&
+        targetExists &&
+        foregroundWindow == intendedWindow;
+
+    static async Task<bool> TrySetClipboardTextAsync(string text)
+    {
+        for (int attempt = 0; attempt < 3; attempt++)
+        {
+            try
+            {
+                System.Windows.Clipboard.SetText(text);
+                return true;
+            }
+            catch (ExternalException) when (attempt < 2)
+            {
+                await Task.Delay(50);
+            }
+            catch (ExternalException)
+            {
+                return false;
+            }
+        }
+        return false;
     }
 
     static INPUT Key(ushort code, bool up) => new()
@@ -559,10 +615,15 @@ public partial class MainWindow : Window
 
     void Refresh_Click(object sender, RoutedEventArgs e) => RefreshDevices();
 
-    void Copy_Click(object sender, RoutedEventArgs e)
+    async void Copy_Click(object sender, RoutedEventArgs e)
     {
-        if (TranscriptBox.Text.Length > 0)
-            System.Windows.Clipboard.SetText(TranscriptBox.Text);
+        if (TranscriptBox.Text.Length == 0) return;
+
+        bool copied = await TrySetClipboardTextAsync(TranscriptBox.Text);
+        if (!IsRecording)
+            SetStatus(copied
+                ? "ミュート中 — 文字起こし結果をコピーしました。"
+                : "ミュート中 — クリップボードへコピーできませんでした。");
     }
 
     void SetStatus(string text)
@@ -590,6 +651,9 @@ public partial class MainWindow : Window
     static extern bool SetForegroundWindow(IntPtr hWnd);
 
     [DllImport("user32.dll")]
+    static extern bool IsWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
     static extern uint SendInput(uint count, INPUT[] inputs, int size);
 
     [StructLayout(LayoutKind.Sequential)]
@@ -613,5 +677,12 @@ public partial class MainWindow : Window
         public uint dwFlags;
         public uint time;
         public IntPtr dwExtraInfo;
+    }
+
+    enum AutomaticPasteResult
+    {
+        Pasted,
+        ClipboardOnly,
+        ClipboardUnavailable,
     }
 }

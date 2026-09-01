@@ -30,7 +30,7 @@
   </Border>
   <Grid Grid.Row="4" Margin="0,16,0,0"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
    <CheckBox x:Name="AutoPasteBox" Content="終了時、元のアプリへ自動貼り付け" IsChecked="True" VerticalAlignment="Center" Foreground="{DynamicResource Muted}" AutomationProperties.HelpText="音声入力を開始する直前に選んでいたアプリへ、認識結果を貼り付けます"/>
-   <Button Grid.Column="1" Content="コピー" Background="{DynamicResource Secondary}" Margin="0,0,10,0" Click="Copy_Click" AutomationProperties.HelpText="文字起こし結果をクリップボードへコピーします"/>
+   <Button Grid.Column="1" x:Name="CopyButton" Content="コピー" Background="{DynamicResource Secondary}" Margin="0,0,10,0" Click="Copy_Click" AutomationProperties.HelpText="文字起こし結果をクリップボードへコピーします"/>
   </Grid>
  </Grid>
 </Window>

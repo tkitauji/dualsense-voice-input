@@ -1,6 +1,6 @@
 # Verification report
 
-Date: 2026-09-01  
+Date: 2026-09-02
 Environment: Windows 11 x64 (10.0.26200), .NET SDK 8.0.424
 
 ## Passed
@@ -35,6 +35,8 @@ Environment: Windows 11 x64 (10.0.26200), .NET SDK 8.0.424
 - The WACK and coexistence scripts resolve repository-relative default paths after parameter binding, avoiding the empty-`PSScriptRoot` default-expression failure reproduced under Windows PowerShell 5.1. The WACK non-administrator guard and coexistence disconnected-controller failure both return exit code 1 cleanly.
 - Protocol self-test: Bluetooth button press/release, Bluetooth audio-report exclusion, USB button press/release, and transport-layout separation all passed.
 - Single-instance test: a second launch exited with code 0, left exactly the original process running, and the original process then closed cleanly with code 0. This prevents two app instances from writing competing Bluetooth microphone clocks.
+- Accessibility startup/UI Automation test: device selection, refresh, transcript editing, and automatic-paste controls expose Japanese accessible names or help text; the published app stayed running and closed cleanly. Invoking refresh through UI Automation produced `LIVE_REGION_PASS|StatusText|DualSenseが見つかりません。接続して再読込してください`, proving that status changes raise the screen-reader `LiveRegionChanged` event with the changed message as its accessible name.
+- Keyboard focus, hover, pressed, disabled, indeterminate download, and Windows high-contrast visual states are implemented. Normal-theme foreground/background contrast is at least 4.64:1 for interactive button text and 6.79:1 for secondary body text.
 - Whisper base model integrity: the downloader's 147,951,465-byte model on the test machine matched pinned SHA-256 `60ED5BC3DD14EEA856493D334349B405782DDCAF0028D4B5DF4088345FBA2EFE`; protocol self-test covers valid, truncated, and hash-mismatch decisions.
 - Distribution licensing: complete NAudio, Concentus/Opus, HidSharp, Whisper.net, whisper.cpp/ggml, OpenAI Whisper, and self-contained .NET license/third-party notices are included in the publish output and MSIX payload.
 

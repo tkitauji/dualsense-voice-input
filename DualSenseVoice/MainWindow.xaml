@@ -1,35 +1,36 @@
 <Window x:Class="DualSenseVoice.MainWindow"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  Title="DualSense Voice" Width="760" Height="570" MinWidth="640" MinHeight="500"
- Background="#0D1220" Foreground="{StaticResource Ink}" WindowStartupLocation="CenterScreen">
+ Language="ja-JP" UseLayoutRounding="True" SnapsToDevicePixels="True"
+ Background="{DynamicResource Canvas}" Foreground="{DynamicResource Ink}" WindowStartupLocation="CenterScreen">
  <Grid Margin="36">
   <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
   <StackPanel>
-   <TextBlock Text="D U A L S E N S E   V O I C E" Foreground="{StaticResource Accent}" FontSize="12" FontWeight="Bold"/>
+   <TextBlock Text="D U A L S E N S E   V O I C E" Foreground="{DynamicResource Accent}" FontSize="12" FontWeight="Bold"/>
    <TextBlock Text="マイクボタンを押して、話す。" FontSize="30" FontWeight="SemiBold" Margin="0,7,0,4"/>
-   <TextBlock Text="1回押して音声入力、もう1回押して文字起こし。Bluetoothのまま使えます。" Foreground="{StaticResource Muted}" FontSize="14"/>
+   <TextBlock Text="1回押して音声入力、もう1回押して文字起こし。Bluetoothのまま使えます。" Foreground="{DynamicResource Muted}" FontSize="14"/>
   </StackPanel>
-  <Border Grid.Row="1" Background="#171E2F" CornerRadius="14" Padding="18" Margin="0,24,0,14">
+  <Border Grid.Row="1" Background="{DynamicResource Surface}" CornerRadius="14" Padding="18" Margin="0,24,0,14">
    <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-    <StackPanel><TextBlock Text="DualSense" Foreground="{StaticResource Muted}" Margin="0,0,0,8"/><ComboBox x:Name="DeviceBox" MinWidth="460" DisplayMemberPath="FriendlyName" SelectionChanged="DeviceBox_SelectionChanged"/></StackPanel>
-    <Button Grid.Column="1" x:Name="RefreshButton" Content="再読込" Background="#2A334A" Margin="12,24,0,0" Click="Refresh_Click"/>
+    <StackPanel><TextBlock x:Name="DeviceLabel" Text="DualSense入力" Foreground="{DynamicResource Muted}" Margin="0,0,0,8"/><ComboBox x:Name="DeviceBox" DisplayMemberPath="FriendlyName" SelectionChanged="DeviceBox_SelectionChanged" AutomationProperties.LabeledBy="{Binding ElementName=DeviceLabel}" AutomationProperties.HelpText="USBまたはBluetooth接続したDualSenseの入力を選びます"/></StackPanel>
+    <Button Grid.Column="1" x:Name="RefreshButton" Content="再読込" Background="{DynamicResource Secondary}" Margin="12,24,0,0" Click="Refresh_Click" AutomationProperties.HelpText="接続中のDualSenseをもう一度検索します"/>
    </Grid>
   </Border>
-  <Border Grid.Row="2" Background="#171E2F" CornerRadius="14" Padding="18" Margin="0,0,0,14">
+  <Border Grid.Row="2" Background="{DynamicResource Surface}" CornerRadius="14" Padding="18" Margin="0,0,0,14">
    <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-    <StackPanel><TextBlock Text="認識モデル" Foreground="{StaticResource Muted}"/><TextBlock x:Name="ModelStatus" Text="未確認" FontSize="15" Margin="0,5,0,0"/></StackPanel>
-    <Button Grid.Column="1" x:Name="DownloadButton" Content="モデルを準備" Click="Download_Click"/>
+    <StackPanel><TextBlock x:Name="ModelLabel" Text="認識モデル" Foreground="{DynamicResource Muted}"/><TextBlock x:Name="ModelStatus" Text="未確認" FontSize="15" Margin="0,5,0,0" AutomationProperties.LiveSetting="Polite"/><ProgressBar x:Name="ModelProgress" Height="4" Margin="0,9,0,0" IsIndeterminate="True" Visibility="Collapsed" Foreground="{DynamicResource Accent}" Background="{DynamicResource Secondary}" AutomationProperties.Name="認識モデルをダウンロード中"/></StackPanel>
+    <Button Grid.Column="1" x:Name="DownloadButton" Content="モデルを準備" Click="Download_Click" AutomationProperties.LabeledBy="{Binding ElementName=ModelLabel}" AutomationProperties.HelpText="初回に日本語音声認識モデルをダウンロードして検証します"/>
    </Grid>
   </Border>
-  <Border Grid.Row="3" Background="#171E2F" CornerRadius="14" Padding="18">
+  <Border Grid.Row="3" Background="{DynamicResource Surface}" CornerRadius="14" Padding="18">
    <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-    <Grid><TextBlock x:Name="StatusText" Text="DualSenseを接続してください" FontSize="14"/><TextBlock Text="マイクボタンで ON / ミュート・効果音で通知" Foreground="{StaticResource Muted}" HorizontalAlignment="Right"/></Grid>
-    <TextBox Grid.Row="1" x:Name="TranscriptBox" Margin="0,14,0,0" Padding="14" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" FontSize="18" Background="#0F1524" Foreground="{StaticResource Ink}" BorderThickness="0"/>
+    <StackPanel><TextBlock x:Name="StatusText" Text="DualSenseを接続してください" FontSize="14" TextWrapping="Wrap" AutomationProperties.LiveSetting="Assertive"/><TextBlock Text="マイクボタンでON／ミュート・開始音と終了音で通知" Foreground="{DynamicResource Muted}" FontSize="12" Margin="0,5,0,0"/></StackPanel>
+    <TextBox Grid.Row="1" x:Name="TranscriptBox" Margin="0,14,0,0" Padding="12" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" FontSize="18" Background="{DynamicResource Field}" Foreground="{DynamicResource Ink}" AutomationProperties.Name="文字起こし結果" AutomationProperties.HelpText="認識した文章を確認、編集できます"/>
    </Grid>
   </Border>
   <Grid Grid.Row="4" Margin="0,16,0,0"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-   <CheckBox x:Name="AutoPasteBox" Content="終了時、元のアプリへ自動貼り付け" IsChecked="True" VerticalAlignment="Center" Foreground="{StaticResource Muted}"/>
-   <Button Grid.Column="1" Content="コピー" Background="#2A334A" Margin="0,0,10,0" Click="Copy_Click"/>
+   <CheckBox x:Name="AutoPasteBox" Content="終了時、元のアプリへ自動貼り付け" IsChecked="True" VerticalAlignment="Center" Foreground="{DynamicResource Muted}" AutomationProperties.HelpText="音声入力を開始する直前に選んでいたアプリへ、認識結果を貼り付けます"/>
+   <Button Grid.Column="1" Content="コピー" Background="{DynamicResource Secondary}" Margin="0,0,10,0" Click="Copy_Click" AutomationProperties.HelpText="文字起こし結果をクリップボードへコピーします"/>
   </Grid>
  </Grid>
 </Window>

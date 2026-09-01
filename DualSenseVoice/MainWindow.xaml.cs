@@ -2,6 +2,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Windows;
+using System.Windows.Automation.Peers;
 using System.Windows.Interop;
 using System.Windows.Threading;
 using NAudio.CoreAudioApi;
@@ -128,7 +129,7 @@ public partial class MainWindow : Window
 
             if (choices.Count == 0)
             {
-                StatusText.Text = "DualSenseが見つかりません。接続して再読込してください";
+                SetStatus("DualSenseが見つかりません。接続して再読込してください");
                 return;
             }
 
@@ -137,7 +138,7 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             suppressDeviceSelection = false;
-            StatusText.Text = $"DualSenseの検索に失敗しました: {ex.Message}";
+            SetStatus($"DualSenseの検索に失敗しました: {ex.Message}");
         }
     }
 
@@ -176,7 +177,7 @@ public partial class MainWindow : Window
                   usbPaths.Contains(choice.ButtonDevicePath);
             if (!connected)
             {
-                StatusText.Text = "DualSenseを再接続しています…";
+                SetStatus("DualSenseを再接続しています…");
                 RefreshDevices();
             }
         }
@@ -215,14 +216,14 @@ public partial class MainWindow : Window
                 usbButtonMonitor.MuteButtonPressed += Controller_MuteButtonPressed;
             }
 
-            StatusText.Text = HasValidModel
+            SetStatus(HasValidModel
                 ? "ミュート中 — DualSenseのマイクボタンで音声入力を開始"
-                : "ミュート中 — 先に認識モデルを準備してください";
+                : "ミュート中 — 先に認識モデルを準備してください");
         }
         catch (Exception ex)
         {
             DisconnectInput();
-            StatusText.Text = $"DualSenseへ接続できません: {ex.Message}";
+            SetStatus($"DualSenseへ接続できません: {ex.Message}");
         }
     }
 
@@ -275,18 +276,18 @@ public partial class MainWindow : Window
     {
         if (!HasValidModel)
         {
-            StatusText.Text = "ミュート中 — 先に認識モデルを準備してください";
+            SetStatus("ミュート中 — 先に認識モデルを準備してください");
             return;
         }
         if (DeviceBox.SelectedItem is not AudioInputChoice choice)
         {
-            StatusText.Text = "DualSenseを接続してください";
+            SetStatus("DualSenseを接続してください");
             return;
         }
         if ((choice.Kind == AudioInputKind.DualSenseBluetooth && bluetoothCapture is null) ||
             (choice.Kind == AudioInputKind.WindowsAudio && usbButtonMonitor is null))
         {
-            StatusText.Text = "DualSenseへ再接続してください";
+            SetStatus("DualSenseへ再接続してください");
             return;
         }
 
@@ -305,7 +306,7 @@ public partial class MainWindow : Window
             recordingTimer.Stop();
             recordingTimer.Start();
             StatusCuePlayer.PlayStarted();
-            StatusText.Text = $"● マイクON — 話してください — {choice.FriendlyName}";
+            SetStatus($"● マイクON — 話してください — {choice.FriendlyName}");
             DeviceBox.IsEnabled = false;
             RefreshButton.IsEnabled = false;
         }
@@ -313,7 +314,7 @@ public partial class MainWindow : Window
         {
             StopWindowsCaptureImmediately();
             DeleteRecordingFile();
-            StatusText.Text = $"音声入力を開始できません: {ex.Message}";
+            SetStatus($"音声入力を開始できません: {ex.Message}");
         }
     }
 
@@ -406,9 +407,9 @@ public partial class MainWindow : Window
                 seconds = recording.AudioDuration.TotalSeconds;
                 if (recording.DecodedFrames == 0)
                 {
-                    StatusText.Text = connectionLost
+                    SetStatus(connectionLost
                         ? "DualSenseとの接続が切れました — 音声を受信できませんでした"
-                        : "ミュート中 — 音声を受信できませんでした";
+                        : "ミュート中 — 音声を受信できませんでした");
                     return;
                 }
             }
@@ -418,11 +419,11 @@ public partial class MainWindow : Window
             }
 
             StatusCuePlayer.PlayStopped();
-            StatusText.Text = connectionLost
+            SetStatus(connectionLost
                 ? $"接続が切れました — 受信済み音声 {seconds:F1}秒を文字に変換中…"
                 : automatic
                     ? $"60秒で自動ミュート — 音声 {seconds:F1}秒を文字に変換中…"
-                    : $"ミュート中 — 音声 {seconds:F1}秒を文字に変換中…";
+                    : $"ミュート中 — 音声 {seconds:F1}秒を文字に変換中…");
 
             using var reader = new WaveFileReader(recordingPath!);
             using var wav = new MemoryStream();
@@ -439,19 +440,19 @@ public partial class MainWindow : Window
                 text.Append(segment.Text);
 
             TranscriptBox.Text = text.ToString().Trim();
-            StatusText.Text = TranscriptBox.Text.Length == 0
+            SetStatus(TranscriptBox.Text.Length == 0
                 ? connectionLost
                     ? "接続が切れました — 受信済み音声を認識できませんでした"
                     : "ミュート中 — 音声を認識できませんでした"
                 : connectionLost
                     ? "接続が切れました — 受信済み音声の文字起こしは完了しました"
-                    : "ミュート中 — 文字起こし完了。もう一度押すと話せます";
+                    : "ミュート中 — 文字起こし完了。もう一度押すと話せます");
             if (AutoPasteBox.IsChecked == true && TranscriptBox.Text.Length > 0)
                 PasteToPreviousWindow();
         }
         catch (Exception ex)
         {
-            StatusText.Text = $"ミュート中 — エラー: {ex.Message}";
+            SetStatus($"ミュート中 — エラー: {ex.Message}");
         }
         finally
         {
@@ -501,11 +502,11 @@ public partial class MainWindow : Window
 
     void UpdateModelState()
     {
-        ModelStatus.Text = HasValidModel
+        SetModelStatus(HasValidModel
             ? "準備完了（Whisper base / 日本語）"
             : File.Exists(ModelPath)
                 ? "モデルが壊れています — 再取得してください"
-                : "初回のみ約148 MBのダウンロードが必要";
+                : "初回のみ約148 MBのダウンロードが必要");
         DownloadButton.Content = File.Exists(ModelPath)
             ? "モデルを再取得"
             : "モデルを準備";
@@ -515,7 +516,8 @@ public partial class MainWindow : Window
     async void Download_Click(object sender, RoutedEventArgs e)
     {
         DownloadButton.IsEnabled = false;
-        ModelStatus.Text = "モデルをダウンロード中…";
+        ModelProgress.Visibility = Visibility.Visible;
+        SetModelStatus("モデルをダウンロード中…");
         string temporaryPath = ModelPath + ".download";
         try
         {
@@ -536,14 +538,18 @@ public partial class MainWindow : Window
             File.Move(temporaryPath, ModelPath, true);
             modelIsValid = true;
             UpdateModelState();
-            StatusText.Text = "ミュート中 — DualSenseのマイクボタンで音声入力を開始";
+            SetStatus("ミュート中 — DualSenseのマイクボタンで音声入力を開始");
         }
         catch (Exception ex)
         {
             if (File.Exists(temporaryPath)) File.Delete(temporaryPath);
             modelIsValid = null;
-            ModelStatus.Text = $"ダウンロード失敗: {ex.Message}";
+            SetModelStatus($"ダウンロード失敗: {ex.Message}");
             DownloadButton.IsEnabled = true;
+        }
+        finally
+        {
+            ModelProgress.Visibility = Visibility.Collapsed;
         }
     }
 
@@ -557,6 +563,24 @@ public partial class MainWindow : Window
     {
         if (TranscriptBox.Text.Length > 0)
             System.Windows.Clipboard.SetText(TranscriptBox.Text);
+    }
+
+    void SetStatus(string text)
+    {
+        StatusText.Text = text;
+        RaiseLiveRegionChanged(StatusText);
+    }
+
+    void SetModelStatus(string text)
+    {
+        ModelStatus.Text = text;
+        RaiseLiveRegionChanged(ModelStatus);
+    }
+
+    static void RaiseLiveRegionChanged(FrameworkElement element)
+    {
+        AutomationPeer? peer = FrameworkElementAutomationPeer.FromElement(element);
+        peer?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
     }
 
     [DllImport("user32.dll")]

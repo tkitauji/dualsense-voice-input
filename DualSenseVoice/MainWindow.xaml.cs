@@ -100,7 +100,11 @@ public partial class MainWindow : Window
                              DataFlow.Capture,
                              DeviceState.Active))
                 {
-                    if (!IsDualSenseAudioDevice(device)) continue;
+                    if (!IsDualSenseAudioDevice(device))
+                    {
+                        device.Dispose();
+                        continue;
+                    }
                     choices.Add(new AudioInputChoice(
                         $"{device.FriendlyName} — USB（Windows標準）",
                         AudioInputKind.WindowsAudio,
@@ -137,7 +141,7 @@ public partial class MainWindow : Window
         }
     }
 
-    static bool IsDualSenseAudioDevice(MMDevice device)
+    internal static bool IsDualSenseAudioDevice(MMDevice device)
     {
         string name = device.FriendlyName;
         return name.Contains("DualSense", StringComparison.OrdinalIgnoreCase) ||

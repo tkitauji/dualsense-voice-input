@@ -64,6 +64,7 @@ Partner Centerの制限付き機能の説明には、`runFullTrust`を「DualSen
 - 音声認識は端末内で完結します。初回のモデル取得だけネット接続が必要です。
 - Bluetooth接続では、物理マイクボタンとDualSense独自のHID音声報告をRaw Inputで受け取り、Opusをアプリ内で直接PCMへ復号します。ミュート中は音声ストリームを停止します。仮想マイクやカーネルドライバーはインストールしません。
 - USB接続では、Windowsが公開する標準録音デバイスからWASAPIで音声を取得し、物理マイクボタンだけをRaw Inputで監視します。
+- USB単独診断`tools/DualSenseUsbHardwareProbe`は、アプリと同じWASAPI・Raw Input経路を使い、2回の物理ボタン押下間の録音時間・データ量・音声エネルギーを検証します。
 - Bluetooth実機試験では、マイクON中にWindowsのWinMMジョイスティック状態を534回読み取り、軸ずれ・誤ボタン・読取エラーはいずれも0でした。
 - 開発用の共存診断ツールは、Bluetoothマイク取得中にWinMMとDirectInputを同時かつ非排他的に監視します。DirectInputでの実機結果、およびSteam Input・FF14を起動した状態での最終確認は未完了です。実行手順は`tools/GameInputInterferenceProbe/README.md`にあります。
 - `run-coexistence-test.ps1`はBaseline・Steam・FF14の前提条件を確認して同じ診断を実行し、比較可能な時刻付きログを`artifacts/hardware`へ保存します。

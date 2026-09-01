@@ -45,6 +45,16 @@
 - [ ] `run-coexistence-test.ps1 -Scenario FF14`が`PASS`する。
 - [ ] アプリをもう一度起動しても2つ目のプロセスは残らず、既存ウィンドウが表示される。
 
+## USB経路の単独診断
+
+DualSense Voiceを終了し、DualSenseをデータ通信対応USBケーブルで接続して次を実行します。1回目の物理マイクボタンで録音を開始し、話してから2回目で停止します。
+
+```powershell
+dotnet run --project tools/DualSenseUsbHardwareProbe -c Release
+```
+
+`RESULT|USB standard microphone and physical mute-button capture passed.`と表示され、録音時間・バイト数・音声エネルギーが0より大きければ、Windows標準マイクとUSB Raw Inputボタンの両経路が合格です。`USB_ENDPOINT_MUTE`には、物理ボタン前後でWindowsの録音エンドポイント自体がミュートされたかも記録されます。その後、アプリ本体で文字起こしと貼り付けまで確認します。
+
 ## 既知の制約
 
 - 管理者権限で動くアプリへは、通常権限の本アプリから自動貼り付けできません。

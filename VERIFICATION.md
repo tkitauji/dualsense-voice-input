@@ -36,7 +36,7 @@ Environment: Windows 11 x64 (10.0.26200), .NET SDK 8.0.424
 
 ## Not available in this environment
 
-- Windows App Certification Kit is not installed on this machine.
+- Windows App Certification Kit is not installed on this machine. The Microsoft-signed 10.0.28000.2705 installer and the WACK-only offline layout were verified, and the main/Appx dependency MSIs were administratively extracted without system installation. `appcert.exe` correctly requires an elevated active-user session; UAC elevation was not granted during this pass. The repository now includes `run-wack.ps1` for the final elevated certification run.
 - The development MSIX uses placeholder identity `DualSenseVoice.Dev`. A Store submission build requires the exact Identity and Publisher strings from the owner's Partner Center account.
 - Automated installation was not forced because Windows requires an interactive security confirmation before trusting a self-signed root certificate. No test certificate, package, or process was left installed.
 - Steam Input, DirectInput itself, and a live FF14 client have not yet been exercised; the successful WinMM probe covers one Windows joystick path but not every input API, overlay, or output-writing interaction.

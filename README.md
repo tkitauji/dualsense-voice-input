@@ -35,6 +35,14 @@ USBまたはBluetooth接続したDualSenseの内蔵マイクを使い、ロー�
 3. 生成された `artifacts/package/*.msix` をWindows App Certification Kitで検証します。
 4. Partner Centerのパッケージ画面へMSIXをアップロードし、説明・プライバシーポリシー・スクリーンショットを登録して提出します。Store提出時の署名はMicrosoftが行います。
 
+最終MSIXは、最新版Windows SDKのWindows App Certification Kitをインストールした管理者PowerShellから次で検査します。
+
+```powershell
+.\run-wack.ps1 -PackagePath .\artifacts\package\DualSenseVoice-1.0.0.0-x64.msix
+```
+
+検査レポートは既定で`artifacts\wack`へ保存されます。スクリプトは既存レポートを上書きしません。
+
 `Packaging/AppxManifest.xml.in`には `microphone` と `runFullTrust` capability、packaged desktop appの実行属性、必須ロゴが設定済みです。リポジトリ既定値で作ったMSIXは開発検証用の未署名パッケージであり、Partner CenterのIdentity値に置き換えてから提出してください。
 
 Partner Centerの制限付き機能の説明には、`runFullTrust`を「DualSense HID Raw Inputからの物理マイクボタンおよび音声の受信、Bluetooth音声クロックの送信、ユーザー操作によるクリップボード貼り付けに必要」と記載してください。Bluetooth音声はWindowsの通常の録音デバイスではなく、アプリがHIDから直接取得します。

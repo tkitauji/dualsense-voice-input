@@ -51,7 +51,7 @@ Paste a concise version of the following for the tester:
 
 - [ ] Reserve the product and provide the exact Partner Center identity values.
 - [ ] Build the final MSIX with those identity values and a new four-part version.
-- [ ] Run the Windows App Certification Kit against the final package.
+- [ ] Run `run-wack.ps1` from an Administrator PowerShell session against the final package and review the generated XML report.
 - [ ] Complete Bluetooth coexistence passes with Steam Input and a live FF14 client.
 - [ ] Complete the USB standard-microphone and physical-button hardware pass.
 - [ ] Capture and upload at least one real 1366×768-or-larger screenshot.

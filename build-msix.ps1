@@ -30,7 +30,11 @@ if ($LASTEXITCODE -ne 0) { throw 'dotnet publish failed.' }
 if ($LASTEXITCODE -ne 0) { throw 'MSIX build tools restore failed.' }
 
 Copy-Item -Path (Join-Path $publishDirectory '*') -Destination $layoutDirectory -Recurse
-Copy-Item -LiteralPath (Join-Path $projectRoot 'Packaging\Assets') -Destination $layoutDirectory -Recurse
+$layoutAssets = Join-Path $layoutDirectory 'Assets'
+New-Item -ItemType Directory -Path $layoutAssets -Force | Out-Null
+foreach ($assetName in @('StoreLogo.png', 'Square44x44Logo.png', 'Square150x150Logo.png')) {
+  Copy-Item -LiteralPath (Join-Path $projectRoot "Packaging\Assets\$assetName") -Destination $layoutAssets
+}
 
 # The selected package architecture is x64. Whisper.net ships all Windows CPU
 # architectures, so omit the unused native runtimes from this architecture package.

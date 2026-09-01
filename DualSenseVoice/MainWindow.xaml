@@ -7,7 +7,7 @@
   <StackPanel>
    <TextBlock Text="D U A L S E N S E   V O I C E" Foreground="{StaticResource Accent}" FontSize="12" FontWeight="Bold"/>
    <TextBlock Text="マイクボタンを押して、話す。" FontSize="30" FontWeight="SemiBold" Margin="0,7,0,4"/>
-   <TextBlock Text="ミュート解除で音声入力、再ミュートで文字起こし。Bluetoothのまま使えます。" Foreground="{StaticResource Muted}" FontSize="14"/>
+   <TextBlock Text="1回押して音声入力、もう1回押して文字起こし。Bluetoothのまま使えます。" Foreground="{StaticResource Muted}" FontSize="14"/>
   </StackPanel>
   <Border Grid.Row="1" Background="#171E2F" CornerRadius="14" Padding="18" Margin="0,24,0,14">
    <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
@@ -28,7 +28,7 @@
    </Grid>
   </Border>
   <Grid Grid.Row="4" Margin="0,16,0,0"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-   <CheckBox x:Name="AutoPasteBox" Content="再ミュート時、元のアプリへ自動貼り付け" IsChecked="True" VerticalAlignment="Center" Foreground="{StaticResource Muted}"/>
+   <CheckBox x:Name="AutoPasteBox" Content="終了時、元のアプリへ自動貼り付け" IsChecked="True" VerticalAlignment="Center" Foreground="{StaticResource Muted}"/>
    <Button Grid.Column="1" Content="コピー" Background="#2A334A" Margin="0,0,10,0" Click="Copy_Click"/>
   </Grid>
  </Grid>

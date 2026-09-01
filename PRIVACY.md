@@ -12,4 +12,4 @@ DualSense Voiceは、DualSenseの物理マイクボタンでユーザーが音�
 
 Microsoft Storeで公開する際は、この文書を公開Webページに掲載し、Partner CenterへそのURLと実際の問い合わせ先を登録してください。
 
-問い合わせ先: `REPLACE_WITH_SUPPORT_EMAIL`
+問い合わせ先: https://github.com/tkitauji/dualsense-voice-input/issues

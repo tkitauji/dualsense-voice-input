@@ -58,14 +58,19 @@ internal sealed class DualSenseMuteButtonMonitor : IDisposable
 
     private void ProcessRawReport(byte[] report)
     {
-        if (report.Length <= UsbButtons2Offset || report[0] != 0x01)
-            return;
-
-        bool pressed = (report[UsbButtons2Offset] & MicrophoneButtonMask) != 0;
+        if (!IsMuteButtonReport(report)) return;
+        bool pressed = HasMuteButtonPressed(report);
         if (pressed && !previousPressed)
             MuteButtonPressed?.Invoke(this, EventArgs.Empty);
         previousPressed = pressed;
     }
+
+    internal static bool IsMuteButtonReport(ReadOnlySpan<byte> report) =>
+        report.Length > UsbButtons2Offset && report[0] == 0x01;
+
+    internal static bool HasMuteButtonPressed(ReadOnlySpan<byte> report) =>
+        IsMuteButtonReport(report) &&
+        (report[UsbButtons2Offset] & MicrophoneButtonMask) != 0;
 
     public void Dispose() => rawInput.Dispose();
 }

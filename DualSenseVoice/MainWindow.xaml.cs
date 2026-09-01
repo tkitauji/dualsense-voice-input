@@ -1,5 +1,4 @@
 using System.IO;
-using System.Media;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
@@ -269,7 +268,7 @@ public partial class MainWindow : Window
 
             recordingTimer.Stop();
             recordingTimer.Start();
-            SystemSounds.Asterisk.Play();
+            StatusCuePlayer.PlayStarted();
             StatusText.Text = $"● マイクON — 話してください — {choice.FriendlyName}";
             DeviceBox.IsEnabled = false;
             RefreshButton.IsEnabled = false;
@@ -376,7 +375,7 @@ public partial class MainWindow : Window
                 seconds = await StopWindowsCaptureAsync();
             }
 
-            SystemSounds.Beep.Play();
+            StatusCuePlayer.PlayStopped();
             StatusText.Text = automatic
                 ? $"60秒で自動ミュート — 音声 {seconds:F1}秒を文字に変換中…"
                 : $"ミュート中 — 音声 {seconds:F1}秒を文字に変換中…";

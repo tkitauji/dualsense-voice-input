@@ -20,6 +20,7 @@ jobs:
           dotnet build tools/DualSenseBluetoothProbe/DualSenseBluetoothProbe.csproj -c Release --nologo
           dotnet build tools/DualSenseEndToEndTest/DualSenseEndToEndTest.csproj -c Release --nologo
           dotnet build tools/GameInputInterferenceProbe/GameInputInterferenceProbe.csproj -c Release --nologo
+          dotnet run --project tools/DualSenseProtocolSelfTest/DualSenseProtocolSelfTest.csproj -c Release --no-restore
       - name: Create development MSIX
         shell: pwsh
         run: ./build-msix.ps1

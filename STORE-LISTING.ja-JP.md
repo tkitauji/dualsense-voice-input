@@ -28,7 +28,6 @@ DualSense Voiceは、USBまたはBluetooth接続したDualSenseワイヤレス�
 ## システム要件
 
 - Windows 11、x64プロセッサ
-- AVX、AVX2、FMA、F16C対応CPU
 - USBまたはBluetooth接続したDualSense
 - 初回モデル取得時のインターネット接続
 

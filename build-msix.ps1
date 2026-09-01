@@ -55,7 +55,12 @@ foreach ($notice in $requiredNotices) {
 
 # The selected package architecture is x64. Whisper.net ships all Windows CPU
 # architectures, so omit the unused native runtimes from this architecture package.
-foreach ($unusedRuntime in @('runtimes\win-x86', 'runtimes\win-arm64')) {
+foreach ($unusedRuntime in @(
+  'runtimes\win-x86',
+  'runtimes\win-arm64',
+  'runtimes\noavx\win-x86',
+  'runtimes\noavx\linux-x64'
+)) {
   $unusedPath = Join-Path $layoutDirectory $unusedRuntime
   if (Test-Path -LiteralPath $unusedPath) { Remove-Item -LiteralPath $unusedPath -Recurse -Force }
 }

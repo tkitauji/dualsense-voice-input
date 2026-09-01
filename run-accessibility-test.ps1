@@ -8,18 +8,17 @@ $ExecutablePath = (Resolve-Path -LiteralPath $ExecutablePath).Path
 Add-Type -AssemblyName PresentationCore
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
-$uiaAssemblies = @(
+$probeAssemblies = @(
   ([System.Windows.Automation.Automation]).Assembly.Location,
   ([System.Windows.Automation.AutomationEventHandler]).Assembly.Location
 )
 Add-Type -TypeDefinition @"
-using System.Threading;
 using System.Windows.Automation;
 
 public static class DualSenseVoiceLiveRegionProbe
 {
-    public static readonly AutoResetEvent Signal = new AutoResetEvent(false);
     public static readonly AutomationEventHandler Handler = OnEvent;
+    public static volatile bool Received;
     public static string AutomationId = "";
     public static string Name = "";
 
@@ -31,10 +30,10 @@ public static class DualSenseVoiceLiveRegionProbe
 
         AutomationId = element.Current.AutomationId;
         Name = element.Current.Name;
-        Signal.Set();
+        Received = true;
     }
 }
-"@ -ReferencedAssemblies $uiaAssemblies
+"@ -ReferencedAssemblies $probeAssemblies
 
 function Copy-ClipboardDataObject {
   $source = [System.Windows.Clipboard]::GetDataObject()
@@ -96,7 +95,10 @@ try {
     [System.Windows.Automation.InvokePattern]::Pattern)
   $invoke.Invoke()
 
-  if (-not [DualSenseVoiceLiveRegionProbe]::Signal.WaitOne(5000)) {
+  for ($attempt = 0; $attempt -lt 50 -and -not [DualSenseVoiceLiveRegionProbe]::Received; $attempt++) {
+    Start-Sleep -Milliseconds 100
+  }
+  if (-not [DualSenseVoiceLiveRegionProbe]::Received) {
     throw 'No LiveRegionChanged event was received after the status update.'
   }
 

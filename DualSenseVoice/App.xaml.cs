@@ -1,6 +1,8 @@
 using System.ComponentModel;
+using System.Runtime.Intrinsics.X86;
 using System.Windows;
 using System.Windows.Media;
+using Whisper.net.LibraryLoader;
 using MediaColor = System.Windows.Media.Color;
 using WpfSystemColors = System.Windows.SystemColors;
 
@@ -38,6 +40,7 @@ public partial class App : System.Windows.Application
             millisecondsTimeOutInterval: Timeout.Infinite,
             executeOnlyOnce: false);
 
+        ConfigureWhisperRuntime();
         ApplyColorTheme();
         SystemParameters.StaticPropertyChanged += SystemParameters_StaticPropertyChanged;
         base.OnStartup(e);
@@ -56,6 +59,28 @@ public partial class App : System.Windows.Application
         {
             // The first instance may still be completing startup.
         }
+    }
+
+    private static void ConfigureWhisperRuntime() =>
+        RuntimeOptions.RuntimeLibraryOrder = GetWhisperRuntimeOrder(
+            SupportsOptimizedWhisperRuntime());
+
+    internal static List<RuntimeLibrary> GetWhisperRuntimeOrder(bool optimizedCpu) =>
+        optimizedCpu
+            ? [RuntimeLibrary.Cpu, RuntimeLibrary.CpuNoAvx]
+            : [RuntimeLibrary.CpuNoAvx];
+
+    internal static bool SupportsOptimizedWhisperRuntime()
+    {
+        if (!X86Base.IsSupported ||
+            !Avx.IsSupported ||
+            !Avx2.IsSupported ||
+            !Fma.IsSupported)
+            return false;
+
+        (_, _, int featureFlags, _) = X86Base.CpuId(1, 0);
+        const int f16cFlag = 1 << 29;
+        return (featureFlags & f16cFlag) != 0;
     }
 
     private void ActivateMainWindow()

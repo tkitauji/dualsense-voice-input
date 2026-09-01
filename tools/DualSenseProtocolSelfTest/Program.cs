@@ -1,5 +1,14 @@
 using DualSenseVoice;
 using NAudio.Wave;
+using Whisper.net;
+using Whisper.net.LibraryLoader;
+
+if (args.Length != 0 &&
+    (args.Length != 4 ||
+     args[0] != "--whisper" ||
+     (args[3] != "cpu" && args[3] != "noavx")))
+    throw new ArgumentException(
+        "Usage: DualSenseProtocolSelfTest [--whisper <model> <wav> <cpu|noavx>]");
 
 var bluetoothReleased = new byte[78];
 bluetoothReleased[0] = 0x31;
@@ -35,6 +44,14 @@ Assert(DualSenseMuteButtonMonitor.HasMuteButtonPressed(usbPressed),
     "Pressed USB button should be true.");
 Assert(!DualSenseMuteButtonMonitor.IsMuteButtonReport(bluetoothPressed),
     "Bluetooth input must not be parsed using the USB layout.");
+
+List<RuntimeLibrary> optimizedOrder = App.GetWhisperRuntimeOrder(optimizedCpu: true);
+List<RuntimeLibrary> compatibleOrder = App.GetWhisperRuntimeOrder(optimizedCpu: false);
+Assert(optimizedOrder.SequenceEqual(
+        [RuntimeLibrary.Cpu, RuntimeLibrary.CpuNoAvx]),
+    "Optimized CPUs should prefer the fast runtime with a No-AVX fallback.");
+Assert(compatibleOrder.SequenceEqual([RuntimeLibrary.CpuNoAvx]),
+    "Older CPUs must never load the AVX-optimized runtime.");
 
 using MemoryStream cueStream = StatusCuePlayer.BuildWave(660, 880);
 using var cueReader = new WaveFileReader(cueStream);
@@ -155,6 +172,8 @@ finally
 
 Console.WriteLine(
     "PASS|Bluetooth/USB parsing, status cues, model download/recovery, paste safety, and interrupted-file cleanup");
+if (args.Length == 4)
+    await RunWhisperRuntimeAsync(args[1], args[2], args[3]);
 
 static void Assert(bool condition, string message)
 {
@@ -171,4 +190,31 @@ static async Task AssertCanceled(Func<Task> action)
     catch (OperationCanceledException)
     {
     }
+}
+
+static async Task RunWhisperRuntimeAsync(
+    string modelPath,
+    string wavePath,
+    string runtime)
+{
+    modelPath = Path.GetFullPath(modelPath);
+    wavePath = Path.GetFullPath(wavePath);
+    if (!File.Exists(modelPath) || !File.Exists(wavePath))
+        throw new FileNotFoundException("The model or WAV test input was not found.");
+
+    RuntimeOptions.RuntimeLibraryOrder = runtime == "noavx"
+        ? [RuntimeLibrary.CpuNoAvx]
+        : [RuntimeLibrary.Cpu];
+    using var factory = WhisperFactory.FromPath(modelPath);
+    using var processor = factory.CreateBuilder().WithLanguage("ja").Build();
+    await using var wave = File.OpenRead(wavePath);
+    var transcript = new System.Text.StringBuilder();
+    await foreach (var segment in processor.ProcessAsync(wave))
+        transcript.Append(segment.Text);
+    string text = transcript.ToString().Trim();
+    if (text.Length == 0)
+        throw new InvalidOperationException("The selected runtime returned an empty transcript.");
+
+    Console.WriteLine(
+        $"WHISPER_RUNTIME_PASS|requested={runtime}|loaded={RuntimeOptions.LoadedLibrary}|text={text}");
 }

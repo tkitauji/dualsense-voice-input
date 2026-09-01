@@ -38,6 +38,7 @@ Paste a concise version of the following for the tester:
 3. Place the cursor in Notepad. Press the controller's physical microphone button once, speak Japanese, and press it again. The local transcript is pasted into Notepad.
 4. The app intentionally does not illuminate the controller microphone LED over Bluetooth; ascending and descending sounds indicate start and stop.
 5. No custom kernel driver is installed. USB capture uses the Windows audio endpoint. Bluetooth capture uses shared user-mode HID access.
+6. The MSIX declares `Microsoft.VCLibs.140.00.UWPDesktop`; Microsoft Store supplies that framework dependency. The app selects the optimized Whisper CPU runtime only when AVX, AVX2, FMA, and F16C are present, and otherwise uses its packaged No-AVX runtime.
 
 ## Store listing
 

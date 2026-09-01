@@ -25,7 +25,7 @@ Environment: Windows 11 x64 (10.0.26200), .NET SDK 8.0.424
 - Physical microphone-button E2E: the first button press was detected from Bluetooth input report `0x31` (`buttons[2]`, bit 2) and started capture; the second press stopped capture and disabled the microphone stream.
 - Physical-button speech pass: captured 344 Opus frames / 3.44 seconds (mean-square energy 31,278,839) and Whisper returned `テスト!`.
 - Muted-state behavior: no media pump or PCM writer runs before the first button press or after the second press. Standard `0x31` mute-LED output is intentionally not mixed into the proprietary Bluetooth audio session because it prevents microphone frames on the tested controller.
-- WinMM/DirectInput coexistence after a clean Bluetooth reconnect: 494 audio frames / 4.94 seconds captured while 534 neutral game-controller samples reported 0.0000 maximum axis delta, 0 button samples, and 0 read errors.
+- WinMM joystick coexistence after a clean Bluetooth reconnect: 494 audio frames / 4.94 seconds captured while 534 neutral game-controller samples reported 0.0000 maximum axis delta, 0 button samples, and 0 read errors.
 - Combined USB-standard-audio/Bluetooth-direct-input application build: succeeded with 0 warnings and 0 errors. USB capture and physical-button behavior still require a USB-connected hardware pass.
 - Self-contained application startup after the physical-button and auto-reconnect changes: stayed running for 5 seconds with the Bluetooth DualSense connected, then closed cleanly with exit code 0.
 - Development MSIX rebuild under Windows PowerShell 5.1: succeeded after explicit UTF-8 manifest handling; MakeAppx unpacked the resulting package successfully.
@@ -36,4 +36,4 @@ Environment: Windows 11 x64 (10.0.26200), .NET SDK 8.0.424
 - Windows App Certification Kit is not installed on this machine.
 - The development MSIX uses placeholder identity `DualSenseVoice.Dev`. A Store submission build requires the exact Identity and Publisher strings from the owner's Partner Center account.
 - Automated installation was not forced because Windows requires an interactive security confirmation before trusting a self-signed root certificate. No test certificate, package, or process was left installed.
-- Steam Input and a live FF14 client have not yet been exercised; the successful WinMM/DirectInput probe covers the Windows input API path but not every overlay or output-writing interaction.
+- Steam Input, DirectInput itself, and a live FF14 client have not yet been exercised; the successful WinMM probe covers one Windows joystick path but not every input API, overlay, or output-writing interaction.

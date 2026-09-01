@@ -19,6 +19,7 @@ jobs:
         run: |
           dotnet build tools/DualSenseBluetoothProbe/DualSenseBluetoothProbe.csproj -c Release --nologo
           dotnet build tools/DualSenseEndToEndTest/DualSenseEndToEndTest.csproj -c Release --nologo
+          dotnet build tools/GameInputInterferenceProbe/GameInputInterferenceProbe.csproj -c Release --nologo
       - name: Create development MSIX
         shell: pwsh
         run: ./build-msix.ps1
@@ -27,4 +28,3 @@ jobs:
         with:
           name: DualSenseVoice-dev-msix
           path: artifacts/package/*.msix
-

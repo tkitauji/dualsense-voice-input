@@ -775,4 +775,3 @@ static class NativeMethods
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool CancelIoEx(IntPtr file, IntPtr overlapped);
 }
-

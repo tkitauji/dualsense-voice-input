@@ -27,4 +27,3 @@
     <Content Include="..\PRIVACY.md" Link="PRIVACY.md" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
-

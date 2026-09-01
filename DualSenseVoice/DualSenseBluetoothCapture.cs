@@ -11,6 +11,10 @@ using Forms = System.Windows.Forms;
 namespace DualSenseVoice;
 
 internal sealed record DualSenseBluetoothDevice(string DevicePath, string FriendlyName);
+internal sealed record DualSenseBluetoothRecording(
+    long DecodedFrames,
+    TimeSpan AudioDuration,
+    long AverageEnergy);
 
 internal sealed class DualSenseBluetoothCapture : IDisposable
 {
@@ -19,25 +23,31 @@ internal sealed class DualSenseBluetoothCapture : IDisposable
     private const int InputReportLength = 78;
     private const int MediaReportLength = 398;
     private const int OpusFrameSamples = 480;
+    private const int BluetoothButtons2Offset = 11;
+    private const byte MicrophoneButtonMask = 0x04;
 
     private readonly object audioLock = new();
-    private readonly WaveFileWriter waveWriter;
-    private readonly IOpusDecoder decoder = OpusCodecFactory.CreateDecoder(48000, 1);
     private readonly short[] pcm = new short[OpusFrameSamples];
     private readonly SafeFileHandle hidHandle;
     private readonly NativeHidWriter hidWriter;
     private readonly RawInputReceiver rawInput;
-    private readonly CancellationTokenSource pumpCancellation = new();
-    private readonly Task pumpTask;
+    private WaveFileWriter? waveWriter;
+    private IOpusDecoder? decoder;
+    private CancellationTokenSource? pumpCancellation;
+    private Task? pumpTask;
     private byte reportSequence;
     private byte packetSequence;
     private long decodedFrames;
     private long decodedSamples;
     private long sampleEnergy;
-    private int accepting = 1;
-    private int stopped;
+    private int accepting;
+    private int recording;
+    private bool previousMuteButtonPressed;
     private bool disposed;
 
+    internal event EventHandler? MuteButtonPressed;
+
+    internal bool IsRecording => Volatile.Read(ref recording) != 0;
     internal long DecodedFrames => Interlocked.Read(ref decodedFrames);
     internal TimeSpan AudioDuration => TimeSpan.FromSeconds(
         Interlocked.Read(ref decodedSamples) / 48000.0);
@@ -45,9 +55,8 @@ internal sealed class DualSenseBluetoothCapture : IDisposable
         ? 0
         : Interlocked.Read(ref sampleEnergy) / DecodedFrames;
 
-    private DualSenseBluetoothCapture(string devicePath, string wavePath)
+    private DualSenseBluetoothCapture(string devicePath)
     {
-        waveWriter = new WaveFileWriter(wavePath, new WaveFormat(48000, 16, 1));
         hidHandle = NativeMethods.CreateFile(
             devicePath,
             NativeMethods.GenericRead | NativeMethods.GenericWrite,
@@ -59,7 +68,6 @@ internal sealed class DualSenseBluetoothCapture : IDisposable
         if (hidHandle.IsInvalid)
         {
             int error = Marshal.GetLastWin32Error();
-            waveWriter.Dispose();
             hidHandle.Dispose();
             throw new InvalidOperationException(
                 $"DualSense Bluetooth HIDを開けませんでした (Win32 {error})。Steamやコントローラー設定ソフトを閉じて再試行してください。");
@@ -70,12 +78,10 @@ internal sealed class DualSenseBluetoothCapture : IDisposable
             hidWriter = new NativeHidWriter(hidHandle);
             rawInput = new RawInputReceiver(devicePath, ProcessRawReport);
             hidWriter.Write(BuildSetupReport(), 1000);
-            pumpTask = Task.Run(() => PumpMedia(pumpCancellation.Token));
         }
         catch
         {
             hidHandle.Dispose();
-            waveWriter.Dispose();
             throw;
         }
     }
@@ -101,8 +107,22 @@ internal sealed class DualSenseBluetoothCapture : IDisposable
         return results;
     }
 
-    internal static DualSenseBluetoothCapture Start(string devicePath, string wavePath) =>
-        new(devicePath, wavePath);
+    internal static DualSenseBluetoothCapture Connect(string devicePath) => new(devicePath);
+
+    internal static DualSenseBluetoothCapture Start(string devicePath, string wavePath)
+    {
+        var capture = Connect(devicePath);
+        try
+        {
+            capture.StartRecording(wavePath);
+            return capture;
+        }
+        catch
+        {
+            capture.Dispose();
+            throw;
+        }
+    }
 
     private static bool IsDualSense(HidDevice device)
     {
@@ -110,6 +130,41 @@ internal sealed class DualSenseBluetoothCapture : IDisposable
         return (device.VendorID == VendorId && device.ProductID == ProductId) ||
                path.Contains("pid_0ce6", StringComparison.OrdinalIgnoreCase) ||
                path.Contains("pid&0ce6", StringComparison.OrdinalIgnoreCase);
+    }
+
+    internal void StartRecording(string wavePath)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        if (Interlocked.CompareExchange(ref recording, 1, 0) != 0)
+            throw new InvalidOperationException("DualSenseマイクはすでに音声入力中です。");
+
+        try
+        {
+            Interlocked.Exchange(ref decodedFrames, 0);
+            Interlocked.Exchange(ref decodedSamples, 0);
+            Interlocked.Exchange(ref sampleEnergy, 0);
+            lock (audioLock)
+            {
+                waveWriter = new WaveFileWriter(wavePath, new WaveFormat(48000, 16, 1));
+                decoder = OpusCodecFactory.CreateDecoder(48000, 1);
+            }
+
+            Volatile.Write(ref accepting, 1);
+            pumpCancellation = new CancellationTokenSource();
+            pumpTask = Task.Run(() => PumpMedia(pumpCancellation.Token));
+        }
+        catch
+        {
+            Volatile.Write(ref accepting, 0);
+            lock (audioLock)
+            {
+                waveWriter?.Dispose();
+                waveWriter = null;
+                decoder = null;
+            }
+            Interlocked.Exchange(ref recording, 0);
+            throw;
+        }
     }
 
     private void PumpMedia(CancellationToken cancellationToken)
@@ -145,6 +200,14 @@ internal sealed class DualSenseBluetoothCapture : IDisposable
 
     private void ProcessRawReport(byte[] report)
     {
+        if (IsMuteButtonReport(report))
+        {
+            bool pressed = (report[BluetoothButtons2Offset] & MicrophoneButtonMask) != 0;
+            if (pressed && !previousMuteButtonPressed)
+                MuteButtonPressed?.Invoke(this, EventArgs.Empty);
+            previousMuteButtonPressed = pressed;
+        }
+
         if (Volatile.Read(ref accepting) == 0 ||
             report.Length < InputReportLength ||
             report[0] != 0x31 ||
@@ -155,7 +218,7 @@ internal sealed class DualSenseBluetoothCapture : IDisposable
         int payloadLength = report.Length - 3 - 4;
         try
         {
-            int samples = decoder.Decode(
+            int samples = decoder!.Decode(
                 report.AsSpan(3, payloadLength), pcm, OpusFrameSamples, false);
             if (samples <= 0) return;
 
@@ -165,7 +228,7 @@ internal sealed class DualSenseBluetoothCapture : IDisposable
 
             lock (audioLock)
             {
-                if (Volatile.Read(ref accepting) == 0) return;
+                if (Volatile.Read(ref accepting) == 0 || waveWriter is null) return;
                 waveWriter.Write(MemoryMarshal.AsBytes(pcm.AsSpan(0, samples)));
             }
             Interlocked.Increment(ref decodedFrames);
@@ -178,15 +241,28 @@ internal sealed class DualSenseBluetoothCapture : IDisposable
         }
     }
 
-    internal async Task StopAsync()
+    internal static bool IsMuteButtonReport(ReadOnlySpan<byte> report) =>
+        report.Length > BluetoothButtons2Offset &&
+        report[0] == 0x31 &&
+        (report[1] & 0x02) == 0;
+
+    internal static bool HasMuteButtonPressed(ReadOnlySpan<byte> report) =>
+        IsMuteButtonReport(report) &&
+        (report[BluetoothButtons2Offset] & MicrophoneButtonMask) != 0;
+
+    internal async Task<DualSenseBluetoothRecording> StopRecordingAsync()
     {
-        if (Interlocked.Exchange(ref stopped, 1) != 0) return;
+        if (Volatile.Read(ref recording) == 0)
+            return new DualSenseBluetoothRecording(DecodedFrames, AudioDuration, AverageEnergy);
+
         Volatile.Write(ref accepting, 0);
         Exception? pumpError = null;
-        pumpCancellation.Cancel();
+        CancellationTokenSource? cancellation = pumpCancellation;
+        Task? pumping = pumpTask;
+        cancellation?.Cancel();
         try
         {
-            await pumpTask.ConfigureAwait(false);
+            if (pumping is not null) await pumping.ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -196,28 +272,46 @@ internal sealed class DualSenseBluetoothCapture : IDisposable
         try
         {
             hidWriter.Write(
-                BuildControlReport(reportSequence, packetSequence, microphoneEnabled: false),
+                BuildControlReport(reportSequence++, packetSequence++, microphoneEnabled: false),
                 1000);
         }
         finally
         {
-            rawInput.Dispose();
-            lock (audioLock) waveWriter.Dispose();
-            hidWriter.Dispose();
-            hidHandle.Dispose();
-            pumpCancellation.Dispose();
+            lock (audioLock)
+            {
+                waveWriter?.Dispose();
+                waveWriter = null;
+                decoder = null;
+            }
+            cancellation?.Dispose();
+            pumpCancellation = null;
+            pumpTask = null;
+            Interlocked.Exchange(ref recording, 0);
         }
 
         if (pumpError is not null)
             throw new InvalidOperationException("DualSense Bluetooth音声の送信が中断されました。", pumpError);
+
+        return new DualSenseBluetoothRecording(DecodedFrames, AudioDuration, AverageEnergy);
     }
+
+    internal Task StopAsync() => StopRecordingAsync();
 
     public void Dispose()
     {
         if (disposed) return;
-        disposed = true;
-        try { StopAsync().GetAwaiter().GetResult(); }
+        try
+        {
+            StopRecordingAsync().GetAwaiter().GetResult();
+        }
         catch { }
+        finally
+        {
+            disposed = true;
+            rawInput.Dispose();
+            hidWriter.Dispose();
+            hidHandle.Dispose();
+        }
     }
 
     private static byte[] BuildSetupReport()
@@ -372,7 +466,7 @@ internal sealed class DualSenseBluetoothCapture : IDisposable
         }
     }
 
-    private sealed class RawInputReceiver : IDisposable
+    internal sealed class RawInputReceiver : IDisposable
     {
         private const int WmInput = 0x00FF;
         private const int WmClose = 0x0010;
@@ -649,4 +743,3 @@ internal sealed class DualSenseBluetoothCapture : IDisposable
         internal static extern bool CancelIoEx(IntPtr file, IntPtr overlapped);
     }
 }
-

@@ -12,5 +12,9 @@ internal sealed record AudioInputChoice(
     string FriendlyName,
     AudioInputKind Kind,
     string? BluetoothDevicePath = null,
-    MMDevice? WindowsDevice = null);
-
+    MMDevice? WindowsDevice = null,
+    string? ButtonDevicePath = null)
+{
+    internal string ConnectionKey =>
+        BluetoothDevicePath ?? WindowsDevice?.ID ?? FriendlyName;
+}

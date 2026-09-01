@@ -39,12 +39,15 @@ foreach ($unusedRuntime in @('runtimes\win-x86', 'runtimes\win-arm64')) {
   if (Test-Path -LiteralPath $unusedPath) { Remove-Item -LiteralPath $unusedPath -Recurse -Force }
 }
 
-$manifest = Get-Content -LiteralPath (Join-Path $projectRoot 'Packaging\AppxManifest.xml.in') -Raw
+$manifestTemplatePath = Join-Path $projectRoot 'Packaging\AppxManifest.xml.in'
+$manifest = [System.IO.File]::ReadAllText($manifestTemplatePath, [System.Text.Encoding]::UTF8)
 $manifest = $manifest.Replace('__PACKAGE_NAME__', $PackageName)
 $manifest = $manifest.Replace('__PUBLISHER__', $Publisher)
 $manifest = $manifest.Replace('__PUBLISHER_DISPLAY_NAME__', $PublisherDisplayName)
 $manifest = $manifest.Replace('__VERSION__', $Version)
-Set-Content -LiteralPath (Join-Path $layoutDirectory 'AppxManifest.xml') -Value $manifest -Encoding utf8NoBOM
+$manifestPath = Join-Path $layoutDirectory 'AppxManifest.xml'
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText($manifestPath, $manifest, $utf8NoBom)
 
 $packageCache = if ($env:NUGET_PACKAGES) { $env:NUGET_PACKAGES } else { Join-Path $env:USERPROFILE '.nuget\packages' }
 $makeAppx = Get-ChildItem -Path (Join-Path $packageCache 'microsoft.windows.sdk.buildtools') -Recurse -Filter 'makeappx.exe' |

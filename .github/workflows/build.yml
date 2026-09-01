@@ -15,7 +15,7 @@ jobs:
           dotnet-version: 8.0.x
       - name: Build
         run: dotnet build DualSenseVoice.sln -c Release --nologo
-      - name: Build Bluetooth diagnostics
+      - name: Build and run diagnostics
         run: |
           pwsh -NoProfile -Command "[scriptblock]::Create((Get-Content -Raw ./run-coexistence-test.ps1)) | Out-Null"
           pwsh -NoProfile -Command "[scriptblock]::Create((Get-Content -Raw ./run-usb-test.ps1)) | Out-Null"
@@ -27,6 +27,7 @@ jobs:
           dotnet build tools/GameInputInterferenceProbe/GameInputInterferenceProbe.csproj -c Release --nologo
           dotnet build tools/DualSenseUsbHardwareProbe/DualSenseUsbHardwareProbe.csproj -c Release --nologo
           dotnet run --project tools/DualSenseProtocolSelfTest/DualSenseProtocolSelfTest.csproj -c Release
+          dotnet run --project tools/DualSenseUiSelfTest/DualSenseUiSelfTest.csproj -c Release -- artifacts/ui-self-test.png
       - name: Create development MSIX
         shell: pwsh
         run: |

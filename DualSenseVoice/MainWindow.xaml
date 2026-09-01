@@ -24,13 +24,13 @@
   </Border>
   <Border Grid.Row="3" Background="{DynamicResource Surface}" CornerRadius="14" Padding="18">
    <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-    <StackPanel><TextBlock x:Name="StatusText" Text="DualSenseを接続してください" FontSize="14" TextWrapping="Wrap" AutomationProperties.LiveSetting="Assertive"/><TextBlock Text="マイクボタンでON／ミュート・開始音と終了音で通知" Foreground="{DynamicResource Muted}" FontSize="12" Margin="0,5,0,0"/></StackPanel>
-    <TextBox Grid.Row="1" x:Name="TranscriptBox" Margin="0,14,0,0" Padding="12" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" FontSize="18" Background="{DynamicResource Field}" Foreground="{DynamicResource Ink}" AutomationProperties.Name="文字起こし結果" AutomationProperties.HelpText="認識した文章を確認、編集できます"/>
+    <StackPanel><TextBlock x:Name="StatusText" Text="DualSenseを接続してください" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" AutomationProperties.LiveSetting="Assertive"/><TextBlock Text="マイクボタンでON／ミュート・開始音と終了音で通知" Foreground="{DynamicResource Muted}" FontSize="12" Margin="0,5,0,0"/></StackPanel>
+    <TextBox Grid.Row="1" x:Name="TranscriptBox" Margin="0,14,0,0" Padding="12" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled" FontSize="18" Background="{DynamicResource Field}" Foreground="{DynamicResource Ink}" AutomationProperties.Name="文字起こし結果" AutomationProperties.HelpText="認識した文章を確認、編集できます"/>
    </Grid>
   </Border>
   <Grid Grid.Row="4" Margin="0,16,0,0"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
    <CheckBox x:Name="AutoPasteBox" Content="終了時、元のアプリへ自動貼り付け" IsChecked="True" VerticalAlignment="Center" Foreground="{DynamicResource Muted}" AutomationProperties.HelpText="音声入力を開始する直前に選んでいたアプリへ、認識結果を貼り付けます"/>
-   <Button Grid.Column="1" x:Name="CopyButton" Content="コピー" Background="{DynamicResource Secondary}" Margin="0,0,10,0" Click="Copy_Click" AutomationProperties.HelpText="文字起こし結果をクリップボードへコピーします"/>
+   <Button Grid.Column="1" x:Name="CopyButton" Content="コピー" Background="{DynamicResource Secondary}" Click="Copy_Click" AutomationProperties.HelpText="文字起こし結果をクリップボードへコピーします"/>
   </Grid>
  </Grid>
 </Window>

@@ -1,0 +1,17 @@
+<Application x:Class="DualSenseVoice.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             StartupUri="MainWindow.xaml">
+  <Application.Resources>
+    <SolidColorBrush x:Key="Ink" Color="#F5F7FF"/>
+    <SolidColorBrush x:Key="Muted" Color="#9BA6BD"/>
+    <SolidColorBrush x:Key="Accent" Color="#7C8CFF"/>
+    <Style TargetType="Button">
+      <Setter Property="Foreground" Value="White"/><Setter Property="Background" Value="#5967E8"/>
+      <Setter Property="BorderThickness" Value="0"/><Setter Property="Padding" Value="18,11"/>
+      <Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button"><Border Background="{TemplateBinding Background}" CornerRadius="10" Padding="{TemplateBinding Padding}"><ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/></Border></ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <Style TargetType="ComboBox"><Setter Property="Background" Value="#20283B"/><Setter Property="Foreground" Value="#121726"/><Setter Property="Padding" Value="10"/><Setter Property="FontSize" Value="14"/></Style>
+  </Application.Resources>
+</Application>

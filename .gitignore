@@ -1,0 +1,14 @@
+bin/
+obj/
+.vs/
+*.user
+*.suo
+artifacts/
+.idea/
+.vscode/
+.dotnet/
+.nuget/
+*.pfx
+*.snk
+ggml-*.bin
+*.download

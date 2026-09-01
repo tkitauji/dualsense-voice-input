@@ -55,4 +55,3 @@ DualSenseの内蔵マイクを明示的に選び、ローカルのWhisperで日�
 - 自動貼り付けはクリップボードとWin32 `SendInput`を使います。管理者権限で動くアプリには、通常権限の本アプリから貼り付けできません。
 - WindowsではBluetooth接続したDualSenseの内蔵マイクが録音デバイスとして公開されません。音声入力にはUSB接続を使用してください。
 - Store提出前に、モデル配布元・Whisper.net・NAudioのライセンス表記をStore listingまたはアプリ内Aboutへ追加してください。
-

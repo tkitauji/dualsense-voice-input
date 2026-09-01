@@ -63,6 +63,7 @@ Partner Centerの制限付き機能の説明には、`runFullTrust`を「DualSen
 - アプリは1プロセスだけ動作します。スタートメニューなどから再度起動すると、既存ウィンドウを前面へ戻します。
 - 自動貼り付けはクリップボードとWin32 `SendInput`を使います。管理者権限で動くアプリには、通常権限の本アプリから貼り付けできません。
 - Steam、DS4Windows、DSXなどが同じコントローラーへ出力していると音声クロックが競合する場合があります。録音できない場合は、それらを終了して「再読込」してください。
-- Store提出前に、モデル配布元・Whisper.net・NAudio・Concentus・HidSharpのライセンス表記をStore listingまたはアプリ内Aboutへ追加してください。
+- 配布物には、モデル・Whisper.net・NAudio・Concentus・HidSharp・.NETランタイムのライセンス本文と第三者通知を`Licenses`フォルダーへ同梱します。
+- 初回取得するWhisper baseモデルは、ファイル長とSHA-256を検証してから保存します。
 
 Bluetooth相互運用のワイヤ形式は、[LinuxAudio4Dualsense5](https://github.com/GeorgLegato/LinuxAudio4Dualsense5)および[DS4WindowsのBluetooth audio実装](https://github.com/hbashton/DS4Windows/blob/main/docs/dualsense-bluetooth-audio-haptics.md)で公開されている観測結果と実機挙動を照合しています。これらのプロジェクトのバイナリやドライバーは本アプリへ組み込みません。

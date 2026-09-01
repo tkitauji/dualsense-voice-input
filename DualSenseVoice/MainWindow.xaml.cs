@@ -1,5 +1,6 @@
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Threading;
@@ -14,6 +15,9 @@ namespace DualSenseVoice;
 public partial class MainWindow : Window
 {
     static readonly TimeSpan MaximumRecordingTime = TimeSpan.FromSeconds(60);
+    internal const long ExpectedModelLength = 147_951_465;
+    internal const string ExpectedModelSha256 =
+        "60ED5BC3DD14EEA856493D334349B405782DDCAF0028D4B5DF4088345FBA2EFE";
 
     readonly MMDeviceEnumerator audioDevices = new();
     readonly DispatcherTimer recordingTimer = new();
@@ -27,6 +31,7 @@ public partial class MainWindow : Window
     IntPtr previousWindow;
     bool busy;
     bool suppressDeviceSelection;
+    bool? modelIsValid;
 
     bool IsRecording =>
         bluetoothCapture?.IsRecording == true || windowsCapture is not null;
@@ -36,8 +41,18 @@ public partial class MainWindow : Window
         "DualSenseVoice",
         "ggml-base.bin");
 
-    bool HasValidModel =>
-        File.Exists(ModelPath) && new FileInfo(ModelPath).Length > 100_000_000;
+    bool HasValidModel => modelIsValid ??= ValidateStoredModel();
+
+    bool ValidateStoredModel()
+    {
+        if (!File.Exists(ModelPath)) return false;
+        using FileStream model = File.OpenRead(ModelPath);
+        return IsExpectedModel(model.Length, SHA256.HashData(model));
+    }
+
+    internal static bool IsExpectedModel(long length, ReadOnlySpan<byte> sha256) =>
+        length == ExpectedModelLength &&
+        sha256.SequenceEqual(Convert.FromHexString(ExpectedModelSha256));
 
     public MainWindow()
     {
@@ -484,7 +499,12 @@ public partial class MainWindow : Window
     {
         ModelStatus.Text = HasValidModel
             ? "準備完了（Whisper base / 日本語）"
-            : "初回のみ約142 MBのダウンロードが必要";
+            : File.Exists(ModelPath)
+                ? "モデルが壊れています — 再取得してください"
+                : "初回のみ約148 MBのダウンロードが必要";
+        DownloadButton.Content = File.Exists(ModelPath)
+            ? "モデルを再取得"
+            : "モデルを準備";
         DownloadButton.Visibility = HasValidModel ? Visibility.Collapsed : Visibility.Visible;
     }
 
@@ -501,15 +521,23 @@ public partial class MainWindow : Window
                          await WhisperGgmlDownloader.Default.GetGgmlModelAsync(GgmlType.Base))
             await using (var file = File.Create(temporaryPath))
                 await model.CopyToAsync(file);
-            if (new FileInfo(temporaryPath).Length <= 100_000_000)
-                throw new InvalidDataException("モデルファイルが不完全です。");
+
+            await using (var downloaded = File.OpenRead(temporaryPath))
+            {
+                byte[] hash = await SHA256.HashDataAsync(downloaded);
+                if (!IsExpectedModel(downloaded.Length, hash))
+                    throw new InvalidDataException(
+                        "モデルのサイズまたはSHA-256が正規ファイルと一致しません。");
+            }
             File.Move(temporaryPath, ModelPath, true);
+            modelIsValid = true;
             UpdateModelState();
             StatusText.Text = "ミュート中 — DualSenseのマイクボタンで音声入力を開始";
         }
         catch (Exception ex)
         {
             if (File.Exists(temporaryPath)) File.Delete(temporaryPath);
+            modelIsValid = null;
             ModelStatus.Text = $"ダウンロード失敗: {ex.Message}";
             DownloadButton.IsEnabled = true;
         }

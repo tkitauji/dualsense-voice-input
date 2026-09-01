@@ -36,6 +36,23 @@ foreach ($assetName in @('StoreLogo.png', 'Square44x44Logo.png', 'Square150x150L
   Copy-Item -LiteralPath (Join-Path $projectRoot "Packaging\Assets\$assetName") -Destination $layoutAssets
 }
 
+$requiredNotices = @(
+  'THIRD-PARTY-NOTICES.md',
+  'Licenses\DOTNET-LICENSE.txt',
+  'Licenses\DOTNET-THIRD-PARTY-NOTICES.txt',
+  'Licenses\CONCENTUS-LICENSE.txt',
+  'Licenses\HIDSHARP-LICENSE.txt',
+  'Licenses\NAUDIO-LICENSE.txt',
+  'Licenses\OPENAI-WHISPER-LICENSE.txt',
+  'Licenses\WHISPER.CPP-LICENSE.txt',
+  'Licenses\WHISPER.NET-LICENSE.txt'
+)
+foreach ($notice in $requiredNotices) {
+  if (-not (Test-Path -LiteralPath (Join-Path $layoutDirectory $notice))) {
+    throw "Required third-party notice is missing from the package layout: $notice"
+  }
+}
+
 # The selected package architecture is x64. Whisper.net ships all Windows CPU
 # architectures, so omit the unused native runtimes from this architecture package.
 foreach ($unusedRuntime in @('runtimes\win-x86', 'runtimes\win-arm64')) {

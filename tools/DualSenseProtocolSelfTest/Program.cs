@@ -46,7 +46,16 @@ Assert(cueReader.TotalTime >= TimeSpan.FromMilliseconds(160) &&
        cueReader.TotalTime <= TimeSpan.FromMilliseconds(180),
     "Status cue duration must remain short.");
 
-Console.WriteLine("PASS|Bluetooth/USB button parsing and status-cue WAV");
+byte[] modelHash = Convert.FromHexString(MainWindow.ExpectedModelSha256);
+Assert(MainWindow.IsExpectedModel(MainWindow.ExpectedModelLength, modelHash),
+    "The pinned Whisper base model should be accepted.");
+Assert(!MainWindow.IsExpectedModel(MainWindow.ExpectedModelLength - 1, modelHash),
+    "A truncated Whisper model should be rejected.");
+modelHash[0] ^= 0xFF;
+Assert(!MainWindow.IsExpectedModel(MainWindow.ExpectedModelLength, modelHash),
+    "A Whisper model with a different SHA-256 should be rejected.");
+
+Console.WriteLine("PASS|Bluetooth/USB button parsing, status-cue WAV, and model integrity");
 
 static void Assert(bool condition, string message)
 {

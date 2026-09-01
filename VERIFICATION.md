@@ -31,6 +31,8 @@ Environment: Windows 11 x64 (10.0.26200), .NET SDK 8.0.424
 - Development MSIX rebuild under Windows PowerShell 5.1: succeeded after explicit UTF-8 manifest handling; MakeAppx unpacked the resulting package successfully.
 - Protocol self-test: Bluetooth button press/release, Bluetooth audio-report exclusion, USB button press/release, and transport-layout separation all passed.
 - Single-instance test: a second launch exited with code 0, left exactly the original process running, and the original process then closed cleanly with code 0. This prevents two app instances from writing competing Bluetooth microphone clocks.
+- Whisper base model integrity: the downloader's 147,951,465-byte model on the test machine matched pinned SHA-256 `60ED5BC3DD14EEA856493D334349B405782DDCAF0028D4B5DF4088345FBA2EFE`; protocol self-test covers valid, truncated, and hash-mismatch decisions.
+- Distribution licensing: complete NAudio, Concentus/Opus, HidSharp, Whisper.net, whisper.cpp/ggml, OpenAI Whisper, and self-contained .NET license/third-party notices are included in the publish output and MSIX payload.
 
 ## Not available in this environment
 

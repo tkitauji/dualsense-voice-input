@@ -14,7 +14,12 @@ internal sealed record DualSenseBluetoothDevice(string DevicePath, string Friend
 internal sealed record DualSenseBluetoothRecording(
     long DecodedFrames,
     TimeSpan AudioDuration,
-    long AverageEnergy);
+    long AverageEnergy,
+    Exception? TransportError = null);
+internal sealed class DualSenseConnectionLostEventArgs(Exception error) : EventArgs
+{
+    internal Exception Error { get; } = error;
+}
 
 internal sealed class DualSenseBluetoothCapture : IDisposable
 {
@@ -46,6 +51,7 @@ internal sealed class DualSenseBluetoothCapture : IDisposable
     private bool disposed;
 
     internal event EventHandler? MuteButtonPressed;
+    internal event EventHandler<DualSenseConnectionLostEventArgs>? ConnectionLost;
 
     internal bool IsRecording => Volatile.Read(ref recording) != 0;
     internal long DecodedFrames => Interlocked.Read(ref decodedFrames);
@@ -152,6 +158,11 @@ internal sealed class DualSenseBluetoothCapture : IDisposable
             Volatile.Write(ref accepting, 1);
             pumpCancellation = new CancellationTokenSource();
             pumpTask = Task.Run(() => PumpMedia(pumpCancellation.Token));
+            _ = pumpTask.ContinueWith(
+                NotifyConnectionLost,
+                CancellationToken.None,
+                TaskContinuationOptions.OnlyOnFaulted,
+                TaskScheduler.Default);
         }
         catch
         {
@@ -165,6 +176,13 @@ internal sealed class DualSenseBluetoothCapture : IDisposable
             Interlocked.Exchange(ref recording, 0);
             throw;
         }
+    }
+
+    private void NotifyConnectionLost(Task failedPump)
+    {
+        Exception? error = failedPump.Exception?.GetBaseException();
+        if (error is not null && Volatile.Read(ref recording) != 0)
+            ConnectionLost?.Invoke(this, new DualSenseConnectionLostEventArgs(error));
     }
 
     private void PumpMedia(CancellationToken cancellationToken)
@@ -269,11 +287,16 @@ internal sealed class DualSenseBluetoothCapture : IDisposable
             pumpError = ex;
         }
 
+        Exception? stopError = null;
         try
         {
             hidWriter.Write(
                 BuildControlReport(reportSequence++, packetSequence++, microphoneEnabled: false),
                 1000);
+        }
+        catch (Exception ex)
+        {
+            stopError = ex;
         }
         finally
         {
@@ -289,8 +312,43 @@ internal sealed class DualSenseBluetoothCapture : IDisposable
             Interlocked.Exchange(ref recording, 0);
         }
 
-        if (pumpError is not null)
-            throw new InvalidOperationException("DualSense Bluetooth音声の送信が中断されました。", pumpError);
+        return new DualSenseBluetoothRecording(
+            DecodedFrames,
+            AudioDuration,
+            AverageEnergy,
+            pumpError ?? stopError);
+    }
+
+    internal async Task<DualSenseBluetoothRecording> AbortRecordingAsync()
+    {
+        if (Volatile.Read(ref recording) == 0)
+            return new DualSenseBluetoothRecording(DecodedFrames, AudioDuration, AverageEnergy);
+
+        Volatile.Write(ref accepting, 0);
+        CancellationTokenSource? cancellation = pumpCancellation;
+        Task? pumping = pumpTask;
+        cancellation?.Cancel();
+        try
+        {
+            if (pumping is not null) await pumping.ConfigureAwait(false);
+        }
+        catch
+        {
+            // The transport error is the reason this path was selected.
+        }
+        finally
+        {
+            lock (audioLock)
+            {
+                waveWriter?.Dispose();
+                waveWriter = null;
+                decoder = null;
+            }
+            cancellation?.Dispose();
+            pumpCancellation = null;
+            pumpTask = null;
+            Interlocked.Exchange(ref recording, 0);
+        }
 
         return new DualSenseBluetoothRecording(DecodedFrames, AudioDuration, AverageEnergy);
     }

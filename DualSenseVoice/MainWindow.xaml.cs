@@ -187,6 +187,7 @@ public partial class MainWindow : Window
                 bluetoothCapture = DualSenseBluetoothCapture.Connect(
                     choice.BluetoothDevicePath!);
                 bluetoothCapture.MuteButtonPressed += Controller_MuteButtonPressed;
+                bluetoothCapture.ConnectionLost += Controller_ConnectionLost;
             }
             else
             {
@@ -211,6 +212,7 @@ public partial class MainWindow : Window
         if (bluetoothCapture is not null)
         {
             bluetoothCapture.MuteButtonPressed -= Controller_MuteButtonPressed;
+            bluetoothCapture.ConnectionLost -= Controller_ConnectionLost;
             bluetoothCapture.Dispose();
             bluetoothCapture = null;
         }
@@ -223,8 +225,23 @@ public partial class MainWindow : Window
         }
     }
 
-    void Controller_MuteButtonPressed(object? sender, EventArgs e) =>
-        Dispatcher.BeginInvoke(new Action(() => _ = ToggleFromControllerAsync()));
+    void Controller_MuteButtonPressed(object? sender, EventArgs e)
+    {
+        if (!Dispatcher.HasShutdownStarted)
+            Dispatcher.BeginInvoke(new Action(() => _ = ToggleFromControllerAsync()));
+    }
+
+    void Controller_ConnectionLost(object? sender, DualSenseConnectionLostEventArgs e)
+    {
+        if (!Dispatcher.HasShutdownStarted)
+            Dispatcher.BeginInvoke(new Action(() => _ = HandleConnectionLostAsync()));
+    }
+
+    async Task HandleConnectionLostAsync()
+    {
+        if (busy || bluetoothCapture?.IsRecording != true) return;
+        await MuteAndTranscribeAsync(connectionLost: true);
+    }
 
     async Task ToggleFromControllerAsync()
     {
@@ -348,7 +365,7 @@ public partial class MainWindow : Window
             await MuteAndTranscribeAsync(automatic: true);
     }
 
-    async Task MuteAndTranscribeAsync(bool automatic = false)
+    async Task MuteAndTranscribeAsync(bool automatic = false, bool connectionLost = false)
     {
         if (!IsRecording || DeviceBox.SelectedItem is not AudioInputChoice choice) return;
         busy = true;
@@ -362,11 +379,17 @@ public partial class MainWindow : Window
             if (choice.Kind == AudioInputKind.DualSenseBluetooth)
             {
                 DualSenseBluetoothRecording recording =
-                    await bluetoothCapture!.StopRecordingAsync();
+                    connectionLost
+                        ? await bluetoothCapture!.AbortRecordingAsync()
+                        : await bluetoothCapture!.StopRecordingAsync();
+                if (recording.TransportError is not null)
+                    connectionLost = true;
                 seconds = recording.AudioDuration.TotalSeconds;
                 if (recording.DecodedFrames == 0)
                 {
-                    StatusText.Text = "ミュート中 — 音声を受信できませんでした";
+                    StatusText.Text = connectionLost
+                        ? "DualSenseとの接続が切れました — 音声を受信できませんでした"
+                        : "ミュート中 — 音声を受信できませんでした";
                     return;
                 }
             }
@@ -376,9 +399,11 @@ public partial class MainWindow : Window
             }
 
             StatusCuePlayer.PlayStopped();
-            StatusText.Text = automatic
-                ? $"60秒で自動ミュート — 音声 {seconds:F1}秒を文字に変換中…"
-                : $"ミュート中 — 音声 {seconds:F1}秒を文字に変換中…";
+            StatusText.Text = connectionLost
+                ? $"接続が切れました — 受信済み音声 {seconds:F1}秒を文字に変換中…"
+                : automatic
+                    ? $"60秒で自動ミュート — 音声 {seconds:F1}秒を文字に変換中…"
+                    : $"ミュート中 — 音声 {seconds:F1}秒を文字に変換中…";
 
             using var reader = new WaveFileReader(recordingPath!);
             using var wav = new MemoryStream();
@@ -396,8 +421,12 @@ public partial class MainWindow : Window
 
             TranscriptBox.Text = text.ToString().Trim();
             StatusText.Text = TranscriptBox.Text.Length == 0
-                ? "ミュート中 — 音声を認識できませんでした"
-                : "ミュート中 — 文字起こし完了。もう一度押すと話せます";
+                ? connectionLost
+                    ? "接続が切れました — 受信済み音声を認識できませんでした"
+                    : "ミュート中 — 音声を認識できませんでした"
+                : connectionLost
+                    ? "接続が切れました — 受信済み音声の文字起こしは完了しました"
+                    : "ミュート中 — 文字起こし完了。もう一度押すと話せます";
             if (AutoPasteBox.IsChecked == true && TranscriptBox.Text.Length > 0)
                 PasteToPreviousWindow();
         }
@@ -412,6 +441,8 @@ public partial class MainWindow : Window
             busy = false;
             DeviceBox.IsEnabled = true;
             RefreshButton.IsEnabled = true;
+            if (connectionLost)
+                RefreshDevices();
         }
     }
 

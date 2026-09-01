@@ -38,3 +38,4 @@ Environment: Windows 11 x64 (10.0.26200), .NET SDK 8.0.424
 - The development MSIX uses placeholder identity `DualSenseVoice.Dev`. A Store submission build requires the exact Identity and Publisher strings from the owner's Partner Center account.
 - Automated installation was not forced because Windows requires an interactive security confirmation before trusting a self-signed root certificate. No test certificate, package, or process was left installed.
 - Steam Input, DirectInput itself, and a live FF14 client have not yet been exercised; the successful WinMM probe covers one Windows joystick path but not every input API, overlay, or output-writing interaction.
+- The mid-recording disconnect recovery path builds successfully and preserves the completed WAV before reconnecting, but a forced-disconnect hardware pass of that new recovery path is still pending.

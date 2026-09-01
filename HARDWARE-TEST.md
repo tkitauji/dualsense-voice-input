@@ -18,7 +18,7 @@
 ```
 
 - `Baseline`: Steam、FF14、DualSense Voiceを終了して実行する。
-- `Steam`: Steamを起動し、DualSense用Steam Inputを有効にしてから実行する。
+- `Steam`: SteamでMonster Hunter Wildsを起動し、DualSense用Steam Inputを有効にして実際のゲームプレイ画面へ入ってから実行する。別タイトルで検証する場合は`-SteamGameProcessName <実行ファイル名>`を付ける。
 - `FF14`: FF14 DirectX 11版でキャラクターを操作できるところまで入り、DualSense Voiceだけ終了して実行する。
 - スクリプトは必要なプロセス、DualSense接続、WinMM、DirectInput、Bluetooth音声フレームを確認します。`PASS`以外は合格として扱いません。
 
@@ -41,7 +41,7 @@
 - [ ] 60秒間停止操作をしない場合、自動的に終了して文字起こしされる。
 - [ ] `run-coexistence-test.ps1 -Scenario Baseline`が`PASS`し、WinMM・DirectInputの両方で軸ずれ、ボタン/D-pad誤入力、読取エラーが0になり、Bluetooth音声フレームも取得できる。
 - [ ] FF14を実際に起動した状態でマイクをON/OFFしても、操作不能、スティックやボタンの誤入力、切断が発生しない。
-- [ ] `run-coexistence-test.ps1 -Scenario Steam`が`PASS`し、その後もSteam Inputの通常操作・振動・再接続が維持される。
+- [ ] Monster Hunter Wildsのゲームプレイ中に`run-coexistence-test.ps1 -Scenario Steam`が`PASS`し、その後もSteam Inputの通常操作・振動・再接続が維持される。
 - [ ] `run-coexistence-test.ps1 -Scenario FF14`が`PASS`する。
 - [ ] アプリをもう一度起動しても2つ目のプロセスは残らず、既存ウィンドウが表示される。
 
@@ -50,13 +50,13 @@
 DualSense Voiceを終了し、DualSenseをデータ通信対応USBケーブルで接続して次を実行します。1回目の物理マイクボタンで録音を開始し、話してから2回目で停止します。
 
 ```powershell
-dotnet run --project tools/DualSenseUsbHardwareProbe -c Release
+.\run-usb-test.ps1
 ```
 
-`RESULT|USB standard microphone and physical mute-button capture passed.`と表示され、録音時間・バイト数・音声エネルギーが0より大きければ、Windows標準マイクとUSB Raw Inputボタンの両経路が合格です。`USB_ENDPOINT_MUTE`には、物理ボタン前後でWindowsの録音エンドポイント自体がミュートされたかも記録されます。その後、アプリ本体で文字起こしと貼り付けまで確認します。
+`PASS|USB|...`と表示され、時刻付きログが`artifacts/hardware`へ保存されれば、Windows標準マイクとUSB Raw Inputボタンの両経路が合格です。ログの`USB_AUDIO`には録音時間・バイト数・音声エネルギー、`USB_ENDPOINT_MUTE`には物理ボタン前後でWindowsの録音エンドポイント自体がミュートされたかが記録されます。その後、アプリ本体で文字起こしと貼り付けまで確認します。
 
 ## 既知の制約
 
 - 管理者権限で動くアプリへは、通常権限の本アプリから自動貼り付けできません。
-- CPUはAVX、AVX2、FMA、F16Cに対応している必要があります。
+- AVX、AVX2、FMA、F16C対応CPUでは高速版、それ以外ではNo-AVX版の音声認識ランタイムを自動使用します。
 - Bluetooth直接入力はWindowsの通常の録音デバイス一覧には現れません。本アプリがDualSenseのHID音声を直接復号します。

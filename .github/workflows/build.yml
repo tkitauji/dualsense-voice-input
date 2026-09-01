@@ -18,8 +18,10 @@ jobs:
       - name: Build Bluetooth diagnostics
         run: |
           pwsh -NoProfile -Command "[scriptblock]::Create((Get-Content -Raw ./run-coexistence-test.ps1)) | Out-Null"
+          pwsh -NoProfile -Command "[scriptblock]::Create((Get-Content -Raw ./run-usb-test.ps1)) | Out-Null"
           pwsh -NoProfile -Command "[scriptblock]::Create((Get-Content -Raw ./run-accessibility-test.ps1)) | Out-Null"
           pwsh -NoProfile -Command "[scriptblock]::Create((Get-Content -Raw ./run-wack.ps1)) | Out-Null"
+          pwsh -NoProfile -Command "[scriptblock]::Create((Get-Content -Raw ./run-store-preflight.ps1)) | Out-Null"
           dotnet build tools/DualSenseBluetoothProbe/DualSenseBluetoothProbe.csproj -c Release --nologo
           dotnet build tools/DualSenseEndToEndTest/DualSenseEndToEndTest.csproj -c Release --nologo
           dotnet build tools/GameInputInterferenceProbe/GameInputInterferenceProbe.csproj -c Release --nologo
@@ -27,7 +29,9 @@ jobs:
           dotnet run --project tools/DualSenseProtocolSelfTest/DualSenseProtocolSelfTest.csproj -c Release
       - name: Create development MSIX
         shell: pwsh
-        run: ./build-msix.ps1
+        run: |
+          ./build-msix.ps1
+          ./run-store-preflight.ps1 -Mode Development
       - name: Upload MSIX
         uses: actions/upload-artifact@v4
         with:

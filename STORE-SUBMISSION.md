@@ -53,8 +53,9 @@ Paste a concise version of the following for the tester:
 - [ ] Reserve the product and provide the exact Partner Center identity values.
 - [ ] Build the final MSIX with those identity values and a new four-part version.
 - [ ] Run `run-wack.ps1` from an Administrator PowerShell session against the final package and review the generated XML report.
-- [ ] Complete Bluetooth coexistence passes with Steam Input and a live FF14 client.
+- [ ] Complete Bluetooth coexistence passes with Steam Input plus live Monster Hunter Wilds gameplay, and with a live FF14 client.
 - [ ] Complete the USB standard-microphone and physical-button hardware pass.
 - [ ] Capture and upload at least one real 1366×768-or-larger screenshot.
+- [ ] Run `run-store-preflight.ps1 -Mode Submission -PackagePath <final-msix>` and resolve every reported failure.
 - [ ] Complete pricing, market availability, properties, IARC age rating, privacy URL, and support contact in Partner Center.
 - [ ] Upload the final MSIX and submit it for certification.

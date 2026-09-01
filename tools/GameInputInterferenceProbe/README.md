@@ -23,7 +23,8 @@ axis changes, active controls, read errors, and decoded audio frames. A passing
 result requires clean readings from both APIs and at least one decoded audio
 frame. The temporary WAV file is deleted before exit.
 
-This test verifies the two Windows input APIs used by many desktop games. A
-live Steam Input profile and FF14 still need their own gameplay checks because
-they can add overlays, remapping, vibration, and controller output traffic that
-this probe does not emulate.
+This test verifies the two Windows input APIs used by many desktop games. The
+repository wrapper additionally requires the real Steam game process (Monster
+Hunter Wilds by default) or FF14 to be running for its named scenario. Manual
+gameplay checks are still required because overlays, remapping, vibration, and
+controller output traffic are not fully represented by neutral-state samples.

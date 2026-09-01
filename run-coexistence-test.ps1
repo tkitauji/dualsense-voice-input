@@ -10,6 +10,8 @@ param(
 
   [string]$ReportDirectory,
 
+  [string]$SteamGameProcessName = 'MonsterHunterWilds',
+
   [switch]$NoBuild
 )
 
@@ -29,14 +31,30 @@ if (Get-Process -Name 'DualSenseVoice' -ErrorAction SilentlyContinue) {
   throw 'Close DualSense Voice before this test; the app and probe must not send two microphone clocks to one controller.'
 }
 
+$SteamGameProcessName = [System.IO.Path]::GetFileNameWithoutExtension($SteamGameProcessName)
+if ([string]::IsNullOrWhiteSpace($SteamGameProcessName)) {
+  throw 'SteamGameProcessName must identify the running Steam game executable.'
+}
+$steamRunning = [bool](Get-Process -Name 'steam' -ErrorAction SilentlyContinue)
+$steamGameRunning = [bool](Get-Process -Name $SteamGameProcessName -ErrorAction SilentlyContinue)
+$ff14Running = [bool](Get-Process -Name 'ffxiv_dx11' -ErrorAction SilentlyContinue)
+
 switch ($Scenario) {
+  'Baseline' {
+    if ($steamRunning -or $steamGameRunning -or $ff14Running) {
+      throw 'Baseline requires Steam, the Steam game, and FF14 to be closed.'
+    }
+  }
   'Steam' {
-    if (-not (Get-Process -Name 'steam' -ErrorAction SilentlyContinue)) {
-      throw 'Steam is not running. Start Steam, enable Steam Input for DualSense, and run this scenario again.'
+    if (-not $steamRunning) {
+      throw 'Steam is not running. Start Steam and enable Steam Input for DualSense.'
+    }
+    if (-not $steamGameRunning) {
+      throw "The Steam game process '$SteamGameProcessName' is not running. Start the game and enter gameplay before retrying."
     }
   }
   'FF14' {
-    if (-not (Get-Process -Name 'ffxiv_dx11' -ErrorAction SilentlyContinue)) {
+    if (-not $ff14Running) {
       throw 'FF14 DirectX 11 is not running. Enter the game and run this scenario again.'
     }
   }
@@ -64,14 +82,14 @@ if (Test-Path -LiteralPath $report) {
   throw "The report path already exists: $report"
 }
 
-$steamRunning = [bool](Get-Process -Name 'steam' -ErrorAction SilentlyContinue)
-$ff14Running = [bool](Get-Process -Name 'ffxiv_dx11' -ErrorAction SilentlyContinue)
 $metadata = @(
-  'DUALSENSE_VOICE_COEXISTENCE_REPORT|version=1'
+  'DUALSENSE_VOICE_COEXISTENCE_REPORT|version=2'
   "TIMESTAMP|$([DateTimeOffset]::Now.ToString('o'))"
   "SCENARIO|$Scenario"
   "OS|$([Environment]::OSVersion.VersionString)"
   "STEAM_RUNNING|$steamRunning"
+  "STEAM_GAME_PROCESS|$SteamGameProcessName"
+  "STEAM_GAME_RUNNING|$steamGameRunning"
   "FF14_RUNNING|$ff14Running"
   "CONTROLLERS|$($controllers.Count)"
 )

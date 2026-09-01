@@ -8,5 +8,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\DualSenseVoice\DualSenseVoice.csproj" />
+    <PackageReference Include="Vortice.DirectInput" Version="3.8.3" />
   </ItemGroup>
 </Project>

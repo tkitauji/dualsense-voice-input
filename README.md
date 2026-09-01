@@ -66,6 +66,7 @@ Partner Centerの制限付き機能の説明には、`runFullTrust`を「DualSen
 - USB接続では、Windowsが公開する標準録音デバイスからWASAPIで音声を取得し、物理マイクボタンだけをRaw Inputで監視します。
 - Bluetooth実機試験では、マイクON中にWindowsのWinMMジョイスティック状態を534回読み取り、軸ずれ・誤ボタン・読取エラーはいずれも0でした。
 - 開発用の共存診断ツールは、Bluetoothマイク取得中にWinMMとDirectInputを同時かつ非排他的に監視します。DirectInputでの実機結果、およびSteam Input・FF14を起動した状態での最終確認は未完了です。実行手順は`tools/GameInputInterferenceProbe/README.md`にあります。
+- `run-coexistence-test.ps1`はBaseline・Steam・FF14の前提条件を確認して同じ診断を実行し、比較可能な時刻付きログを`artifacts/hardware`へ保存します。
 - 接続状態を3秒ごとに確認し、切断・再接続後はアプリ側も自動的に接続し直します。
 - 音声入力中にBluetoothが切れても即時検出し、そこまで受信できた音声は文字起こししてから再接続待ちへ戻ります。
 - Bluetooth直接入力中の本体マイクLEDは点灯しません。開始は上昇音、終了は下降音と画面表示で通知します。

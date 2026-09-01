@@ -17,6 +17,8 @@ jobs:
         run: dotnet build DualSenseVoice.sln -c Release --nologo
       - name: Build Bluetooth diagnostics
         run: |
+          pwsh -NoProfile -Command "[scriptblock]::Create((Get-Content -Raw ./run-coexistence-test.ps1)) | Out-Null"
+          pwsh -NoProfile -Command "[scriptblock]::Create((Get-Content -Raw ./run-wack.ps1)) | Out-Null"
           dotnet build tools/DualSenseBluetoothProbe/DualSenseBluetoothProbe.csproj -c Release --nologo
           dotnet build tools/DualSenseEndToEndTest/DualSenseEndToEndTest.csproj -c Release --nologo
           dotnet build tools/GameInputInterferenceProbe/GameInputInterferenceProbe.csproj -c Release --nologo

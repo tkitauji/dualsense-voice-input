@@ -5,7 +5,22 @@
 ## 前提
 
 1. DualSenseをUSBまたはBluetoothでPCへ接続し、ライトバーが点灯していることを確認する。
-2. Steam、DS4Windows、DSXなど、コントローラーへ出力するアプリを終了する。
+2. 通常の機能テストと`Baseline`では、Steam、DS4Windows、DSXなど、コントローラーへ出力するアプリを終了する。共存テストでは下記シナリオで指定した対象だけを起動する。
+
+## Bluetooth共存テスト
+
+次の3回を順に実行します。各回とも7秒間、スティック、トリガー、ボタン、D-padを中立に保ちます。結果は`artifacts/hardware`に時刻付きで保存されます。
+
+```powershell
+.\run-coexistence-test.ps1 -Scenario Baseline
+.\run-coexistence-test.ps1 -Scenario Steam
+.\run-coexistence-test.ps1 -Scenario FF14
+```
+
+- `Baseline`: Steam、FF14、DualSense Voiceを終了して実行する。
+- `Steam`: Steamを起動し、DualSense用Steam Inputを有効にしてから実行する。
+- `FF14`: FF14 DirectX 11版でキャラクターを操作できるところまで入り、DualSense Voiceだけ終了して実行する。
+- スクリプトは必要なプロセス、DualSense接続、WinMM、DirectInput、Bluetooth音声フレームを確認します。`PASS`以外は合格として扱いません。
 
 ## テスト項目
 
@@ -24,9 +39,10 @@
 - [ ] 再接続して「再読込」を押すとDualSenseが再表示される。
 - [ ] 再ミュート後、次のミュート解除までマイク音声報告が停止する。
 - [ ] 60秒間停止操作をしない場合、自動的に終了して文字起こしされる。
-- [ ] `dotnet run --project tools/GameInputInterferenceProbe -c Release`を実行し、WinMM・DirectInputの両方で軸ずれ、ボタン/D-pad誤入力、読取エラーが0になり、Bluetooth音声フレームも取得できる。
+- [ ] `run-coexistence-test.ps1 -Scenario Baseline`が`PASS`し、WinMM・DirectInputの両方で軸ずれ、ボタン/D-pad誤入力、読取エラーが0になり、Bluetooth音声フレームも取得できる。
 - [ ] FF14を実際に起動した状態でマイクをON/OFFしても、操作不能、スティックやボタンの誤入力、切断が発生しない。
-- [ ] Steam Input有効時に、通常操作・振動・再接続が維持される。
+- [ ] `run-coexistence-test.ps1 -Scenario Steam`が`PASS`し、その後もSteam Inputの通常操作・振動・再接続が維持される。
+- [ ] `run-coexistence-test.ps1 -Scenario FF14`が`PASS`する。
 - [ ] アプリをもう一度起動しても2つ目のプロセスは残らず、既存ウィンドウが表示される。
 
 ## 既知の制約

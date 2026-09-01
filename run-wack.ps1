@@ -1,10 +1,17 @@
 param(
-  [string]$PackagePath = (Join-Path $PSScriptRoot 'artifacts\package\DualSenseVoice-1.0.0.0-x64.msix'),
-  [string]$ReportPath = (Join-Path $PSScriptRoot ('artifacts\wack\DualSenseVoice-{0:yyyyMMdd-HHmmss}.xml' -f (Get-Date))),
+  [string]$PackagePath,
+  [string]$ReportPath,
   [string]$AppCertPath
 )
 
 $ErrorActionPreference = 'Stop'
+
+if ([string]::IsNullOrWhiteSpace($PackagePath)) {
+  $PackagePath = Join-Path $PSScriptRoot 'artifacts\package\DualSenseVoice-1.0.0.0-x64.msix'
+}
+if ([string]::IsNullOrWhiteSpace($ReportPath)) {
+  $ReportPath = Join-Path $PSScriptRoot ('artifacts\wack\DualSenseVoice-{0:yyyyMMdd-HHmmss}.xml' -f (Get-Date))
+}
 
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
 $principal = New-Object Security.Principal.WindowsPrincipal($identity)

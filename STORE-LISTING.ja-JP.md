@@ -10,7 +10,7 @@ DualSenseの内蔵マイクで、どのWindowsアプリにも日本語を音声�
 
 ## 説明
 
-DualSense Voiceは、DualSenseワイヤレスコントローラーのマイクをWindowsの音声入力デバイスとして選び、話した日本語をテキストへ変換するデスクトップアプリです。
+DualSense Voiceは、BluetoothまたはUSB接続したDualSenseワイヤレスコントローラーのマイクで、話した日本語をテキストへ変換するデスクトップアプリです。Bluetoothでは専用ドライバーを追加せず、コントローラーの音声をアプリ内で直接受信します。
 
 グローバルショートカット `Ctrl + Shift + Space` で録音を開始・停止。変換したテキストは、元のアプリへ自動的に貼り付けることも、クリップボードへコピーすることもできます。
 
@@ -18,7 +18,8 @@ DualSense Voiceは、DualSenseワイヤレスコントローラーのマイク�
 
 ## 主な機能
 
-- DualSenseを含む録音デバイスの選択
+- Bluetooth接続したDualSenseマイクの直接入力（専用ドライバー不要）
+- USB接続を含むWindows録音デバイスの選択
 - 日本語のローカル音声認識
 - グローバルショートカットによる録音操作
 - 元のアプリへの自動貼り付け
@@ -29,11 +30,12 @@ DualSense Voiceは、DualSenseワイヤレスコントローラーのマイク�
 
 - Windows 11、x64プロセッサ
 - AVX、AVX2、FMA、F16C対応CPU
-- USB接続され、Windowsの録音デバイスとして認識されるDualSense
+- BluetoothまたはUSB接続したDualSense
 - 初回モデル取得時のインターネット接続
 
 ## 注意事項
 
 DualSenseはSony Interactive Entertainment Inc.の商標です。本アプリはSony Interactive EntertainmentまたはMicrosoftの関連製品・公式製品ではありません。
 
-Bluetooth接続ではDualSense内蔵マイクがWindowsの録音デバイスとして公開されないため、音声入力にはUSB接続が必要です。
+Bluetooth直接入力が他のコントローラー設定アプリと競合する場合は、Steam、DS4Windows、DSXなどを終了してから再接続してください。
+

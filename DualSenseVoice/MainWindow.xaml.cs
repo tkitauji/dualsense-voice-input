@@ -15,6 +15,7 @@ public partial class MainWindow : Window
     const int HotkeyId = 0x4456;
     readonly MMDeviceEnumerator devices = new();
     WasapiCapture? capture;
+    DualSenseBluetoothCapture? bluetoothCapture;
     WaveFileWriter? writer;
     string? recordingPath;
     IntPtr previousWindow;
@@ -26,14 +27,46 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         Loaded += (_, _) => { RefreshDevices(); UpdateModelState(); RegisterShortcut(); };
-        Closed += (_, _) => { UnregisterHotKey(new WindowInteropHelper(this).Handle, HotkeyId); capture?.Dispose(); devices.Dispose(); };
+        Closed += (_, _) =>
+        {
+            UnregisterHotKey(new WindowInteropHelper(this).Handle, HotkeyId);
+            bluetoothCapture?.Dispose();
+            capture?.Dispose();
+            writer?.Dispose();
+            devices.Dispose();
+        };
     }
 
     void RefreshDevices()
     {
-        DeviceBox.ItemsSource = devices.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active).ToList();
-        DeviceBox.SelectedIndex = DeviceBox.Items.Cast<MMDevice>().ToList().FindIndex(d => d.FriendlyName.Contains("Wireless Controller", StringComparison.OrdinalIgnoreCase) || d.FriendlyName.Contains("DualSense", StringComparison.OrdinalIgnoreCase));
-        if (DeviceBox.SelectedIndex < 0 && DeviceBox.Items.Count > 0) DeviceBox.SelectedIndex = 0;
+        var choices = new List<AudioInputChoice>();
+        try
+        {
+            choices.AddRange(DualSenseBluetoothCapture.EnumerateConnected().Select(device =>
+                new AudioInputChoice(
+                    $"{device.FriendlyName} — Bluetoothマイク（直接）",
+                    AudioInputKind.DualSenseBluetooth,
+                    BluetoothDevicePath: device.DevicePath)));
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"DualSenseの検索に失敗しました: {ex.Message}";
+        }
+
+        choices.AddRange(devices
+            .EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active)
+            .Select(device => new AudioInputChoice(
+                device.FriendlyName,
+                AudioInputKind.WindowsAudio,
+                WindowsDevice: device)));
+        DeviceBox.ItemsSource = choices;
+        DeviceBox.SelectedIndex = choices.FindIndex(choice =>
+            choice.Kind == AudioInputKind.DualSenseBluetooth);
+        if (DeviceBox.SelectedIndex < 0)
+            DeviceBox.SelectedIndex = choices.FindIndex(choice =>
+                choice.FriendlyName.Contains("Wireless Controller", StringComparison.OrdinalIgnoreCase) ||
+                choice.FriendlyName.Contains("DualSense", StringComparison.OrdinalIgnoreCase));
+        if (DeviceBox.SelectedIndex < 0 && choices.Count > 0) DeviceBox.SelectedIndex = 0;
     }
 
     void RegisterShortcut()
@@ -47,28 +80,40 @@ public partial class MainWindow : Window
     async Task ToggleRecordingAsync()
     {
         if (busy) return;
-        if (capture is null) StartRecording(); else await StopAndTranscribeAsync();
+        if (capture is null && bluetoothCapture is null) StartRecording();
+        else await StopAndTranscribeAsync();
     }
 
     void StartRecording()
     {
         if (!HasValidModel) { StatusText.Text = "先に認識モデルを準備してください"; return; }
-        if (DeviceBox.SelectedItem is not MMDevice device) { StatusText.Text = "マイクを選択してください"; return; }
+        if (DeviceBox.SelectedItem is not AudioInputChoice choice) { StatusText.Text = "マイクを選択してください"; return; }
         try
         {
             previousWindow = GetForegroundWindow();
             recordingPath = Path.Combine(Path.GetTempPath(), $"DualSenseVoice-{Guid.NewGuid():N}.wav");
-            capture = new WasapiCapture(device);
-            writer = new WaveFileWriter(recordingPath, capture.WaveFormat);
-            capture.DataAvailable += (_, e) => writer?.Write(e.Buffer, 0, e.BytesRecorded);
-            capture.RecordingStopped += (_, _) => writer?.Flush();
-            capture.StartRecording();
-            StatusText.Text = $"● 録音中 — {device.FriendlyName}";
+            if (choice.Kind == AudioInputKind.DualSenseBluetooth)
+            {
+                bluetoothCapture = DualSenseBluetoothCapture.Start(
+                    choice.BluetoothDevicePath!, recordingPath);
+            }
+            else
+            {
+                capture = new WasapiCapture(choice.WindowsDevice!);
+                writer = new WaveFileWriter(recordingPath, capture.WaveFormat);
+                capture.DataAvailable += (_, e) => writer?.Write(e.Buffer, 0, e.BytesRecorded);
+                capture.RecordingStopped += (_, _) => writer?.Flush();
+                capture.StartRecording();
+            }
+            StatusText.Text = $"● 録音中 — {choice.FriendlyName}";
             RecordButton.Content = "停止して文字化";
             RecordButton.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(220, 69, 91));
+            DeviceBox.IsEnabled = false;
+            RefreshButton.IsEnabled = false;
         }
         catch (Exception ex)
         {
+            bluetoothCapture?.Dispose(); bluetoothCapture = null;
             capture?.Dispose(); capture = null;
             writer?.Dispose(); writer = null;
             if (recordingPath is not null && File.Exists(recordingPath)) File.Delete(recordingPath);
@@ -80,12 +125,22 @@ public partial class MainWindow : Window
     {
         busy = true;
         RecordButton.IsEnabled = false;
-        capture!.StopRecording();
-        capture.Dispose(); capture = null;
-        writer?.Dispose(); writer = null;
-        StatusText.Text = "音声を文字に変換中…";
         try
         {
+            if (bluetoothCapture is not null)
+            {
+                var directCapture = bluetoothCapture;
+                await directCapture.StopAsync();
+                StatusText.Text = $"Bluetooth音声 {directCapture.AudioDuration.TotalSeconds:F1}秒を文字に変換中…";
+            }
+            else
+            {
+                capture!.StopRecording();
+                capture.Dispose(); capture = null;
+                writer?.Dispose(); writer = null;
+                StatusText.Text = "音声を文字に変換中…";
+            }
+
             using var reader = new WaveFileReader(recordingPath!);
             using var wav = new MemoryStream();
             var resampler = new WdlResamplingSampleProvider(reader.ToSampleProvider(), 16000);
@@ -102,15 +157,20 @@ public partial class MainWindow : Window
         catch (Exception ex) { StatusText.Text = $"エラー: {ex.Message}"; }
         finally
         {
+            bluetoothCapture?.Dispose(); bluetoothCapture = null;
+            capture?.Dispose(); capture = null;
+            writer?.Dispose(); writer = null;
             if (recordingPath is not null) File.Delete(recordingPath);
             busy = false; RecordButton.IsEnabled = true; RecordButton.Content = "録音を開始";
             RecordButton.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(89, 103, 232));
+            DeviceBox.IsEnabled = true;
+            RefreshButton.IsEnabled = true;
         }
     }
 
     void PasteToPreviousWindow()
     {
-        Clipboard.SetText(TranscriptBox.Text);
+        System.Windows.Clipboard.SetText(TranscriptBox.Text);
         if (previousWindow == IntPtr.Zero || previousWindow == new WindowInteropHelper(this).Handle) return;
         SetForegroundWindow(previousWindow);
         var inputs = new[] { Key(0x11, false), Key(0x56, false), Key(0x56, true), Key(0x11, true) };
@@ -141,7 +201,7 @@ public partial class MainWindow : Window
     }
     async void Record_Click(object sender, RoutedEventArgs e) => await ToggleRecordingAsync();
     void Refresh_Click(object sender, RoutedEventArgs e) => RefreshDevices();
-    void Copy_Click(object sender, RoutedEventArgs e) { if (TranscriptBox.Text.Length > 0) Clipboard.SetText(TranscriptBox.Text); }
+    void Copy_Click(object sender, RoutedEventArgs e) { if (TranscriptBox.Text.Length > 0) System.Windows.Clipboard.SetText(TranscriptBox.Text); }
 
     [DllImport("user32.dll")] static extern bool RegisterHotKey(IntPtr hWnd, int id, uint modifiers, uint vk);
     [DllImport("user32.dll")] static extern bool UnregisterHotKey(IntPtr hWnd, int id);
@@ -152,3 +212,4 @@ public partial class MainWindow : Window
     [StructLayout(LayoutKind.Explicit)] struct InputUnion { [FieldOffset(0)] public KEYBDINPUT ki; }
     [StructLayout(LayoutKind.Sequential)] struct KEYBDINPUT { public ushort wVk, wScan; public uint dwFlags, time; public IntPtr dwExtraInfo; }
 }
+

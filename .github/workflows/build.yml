@@ -15,6 +15,10 @@ jobs:
           dotnet-version: 8.0.x
       - name: Build
         run: dotnet build DualSenseVoice.sln -c Release --nologo
+      - name: Build Bluetooth diagnostics
+        run: |
+          dotnet build tools/DualSenseBluetoothProbe/DualSenseBluetoothProbe.csproj -c Release --nologo
+          dotnet build tools/DualSenseEndToEndTest/DualSenseEndToEndTest.csproj -c Release --nologo
       - name: Create development MSIX
         shell: pwsh
         run: ./build-msix.ps1
@@ -23,3 +27,4 @@ jobs:
         with:
           name: DualSenseVoice-dev-msix
           path: artifacts/package/*.msix
+

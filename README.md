@@ -2,20 +2,20 @@
 
 [![Windows build](https://github.com/tkitauji/dualsense-voice-input/actions/workflows/build.yml/badge.svg)](https://github.com/tkitauji/dualsense-voice-input/actions/workflows/build.yml)
 
-DualSenseの内蔵マイクを明示的に選び、ローカルのWhisperで日本語を文字起こしするWindowsアプリです。`Ctrl + Shift + Space`で録音を開始・停止し、停止後に元のアプリへ文字列を貼り付けます。
+BluetoothまたはUSB接続したDualSenseの内蔵マイクを使い、ローカルのWhisperで日本語を文字起こしするWindowsアプリです。`Ctrl + Shift + Space`で録音を開始・停止し、停止後に元のアプリへ文字列を貼り付けます。
 
 ## 必要環境
 
 - Windows 11（Whisper.net 1.9.1のCPUランタイム要件）
 - Visual Studio 2022（.NETデスクトップ開発、Windows 10/11 SDK、MSIX Packaging Tools）
 - .NET 8 SDK
-- USB接続したDualSense（Bluetoothではコントローラー操作はできますが、内蔵マイクがWindowsの録音デバイスとして公開されません）
+- BluetoothまたはUSB接続したDualSense
 
 ## 開発実行
 
-1. Windowsの「設定 → プライバシーとセキュリティ → マイク」でデスクトップアプリのマイク利用を許可します。
+1. DualSenseをBluetoothまたはUSBで接続します。USB/WASAPI入力も使う場合は、Windowsの「設定 → プライバシーとセキュリティ → マイク」でデスクトップアプリのマイク利用を許可します。
 2. `DualSenseVoice.sln`をVisual Studioで開き、NuGetパッケージを復元します。
-3. x64で起動し、入力デバイスから `Microphone (Wireless Controller)` またはDualSenseに該当する項目を選びます。
+3. x64で起動します。Bluetooth接続時は `DualSense Wireless Controller — Bluetoothマイク（直接）` が自動選択されます。USB接続時は `Microphone (Wireless Controller)` を選べます。
 4. 「モデルを準備」を押します（初回のみ）。
 5. 入力したいアプリにカーソルを置き、`Ctrl + Shift + Space`で録音開始、もう一度押して停止します。
 
@@ -37,6 +37,8 @@ DualSenseの内蔵マイクを明示的に選び、ローカルのWhisperで日�
 
 `Packaging/AppxManifest.xml.in`には `microphone` と `runFullTrust` capability、packaged desktop appの実行属性、必須ロゴが設定済みです。リポジトリ既定値で作ったMSIXは開発検証用の未署名パッケージであり、Partner CenterのIdentity値に置き換えてから提出してください。
 
+Partner Centerの制限付き機能の説明には、`runFullTrust`を「DualSense HID Raw Inputの受信、Bluetooth音声クロックの送信、グローバルホットキー、ユーザー操作によるクリップボード貼り付けに必要」と記載してください。`microphone` capabilityはUSB/WASAPI入力の互換経路で使用します。
+
 ## 開発用MSIXの実機インストール
 
 配布物 `DualSenseVoice-dev-msix-v1.0.0.zip` は、自己署名した開発用MSIX、公開証明書、インストール・アンインストールスクリプトを含みます。これはStore公開版ではありません。
@@ -52,6 +54,10 @@ DualSenseの内蔵マイクを明示的に選び、ローカルのWhisperで日�
 ## 設計上の注意
 
 - 音声認識は端末内で完結します。初回のモデル取得だけネット接続が必要です。
+- Bluetooth接続では、DualSense独自のHID音声報告をRaw Inputで受け取り、Opusをアプリ内で直接PCMへ復号します。仮想マイクやカーネルドライバーはインストールしません。
 - 自動貼り付けはクリップボードとWin32 `SendInput`を使います。管理者権限で動くアプリには、通常権限の本アプリから貼り付けできません。
-- WindowsではBluetooth接続したDualSenseの内蔵マイクが録音デバイスとして公開されません。音声入力にはUSB接続を使用してください。
-- Store提出前に、モデル配布元・Whisper.net・NAudioのライセンス表記をStore listingまたはアプリ内Aboutへ追加してください。
+- Steam、DS4Windows、DSXなどが同じコントローラーへ出力していると音声クロックが競合する場合があります。録音できない場合は、それらを終了して「再読込」してください。
+- Store提出前に、モデル配布元・Whisper.net・NAudio・Concentus・HidSharpのライセンス表記をStore listingまたはアプリ内Aboutへ追加してください。
+
+Bluetooth相互運用のワイヤ形式は、[LinuxAudio4Dualsense5](https://github.com/GeorgLegato/LinuxAudio4Dualsense5)および[DS4WindowsのBluetooth audio実装](https://github.com/hbashton/DS4Windows/blob/main/docs/dualsense-bluetooth-audio-haptics.md)で公開されている観測結果と実機挙動を照合しています。これらのプロジェクトのバイナリやドライバーは本アプリへ組み込みません。
+

@@ -7,12 +7,12 @@
   <StackPanel>
    <TextBlock Text="D U A L S E N S E   V O I C E" Foreground="{StaticResource Accent}" FontSize="12" FontWeight="Bold"/>
    <TextBlock Text="話すだけで、入力する。" FontSize="30" FontWeight="SemiBold" Margin="0,7,0,4"/>
-   <TextBlock Text="DualSenseのマイクを選び、どのアプリにも文字を貼り付けられます。" Foreground="{StaticResource Muted}" FontSize="14"/>
+   <TextBlock Text="Bluetooth接続のDualSenseマイクから、どのアプリにも文字を貼り付けられます。" Foreground="{StaticResource Muted}" FontSize="14"/>
   </StackPanel>
   <Border Grid.Row="1" Background="#171E2F" CornerRadius="14" Padding="18" Margin="0,24,0,14">
    <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
     <StackPanel><TextBlock Text="入力デバイス" Foreground="{StaticResource Muted}" Margin="0,0,0,8"/><ComboBox x:Name="DeviceBox" MinWidth="460" DisplayMemberPath="FriendlyName"/></StackPanel>
-    <Button Grid.Column="1" Content="再読込" Background="#2A334A" Margin="12,24,0,0" Click="Refresh_Click"/>
+    <Button Grid.Column="1" x:Name="RefreshButton" Content="再読込" Background="#2A334A" Margin="12,24,0,0" Click="Refresh_Click"/>
    </Grid>
   </Border>
   <Border Grid.Row="2" Background="#171E2F" CornerRadius="14" Padding="18" Margin="0,0,0,14">
@@ -34,3 +34,4 @@
   </Grid>
  </Grid>
 </Window>
+

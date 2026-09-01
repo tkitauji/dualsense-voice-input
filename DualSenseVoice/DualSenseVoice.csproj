@@ -3,6 +3,7 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>DualSenseVoice</AssemblyName>
@@ -16,6 +17,8 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="NAudio" Version="2.3.0" />
+    <PackageReference Include="Concentus" Version="2.2.2" />
+    <PackageReference Include="HidSharp" Version="2.6.4" />
     <PackageReference Include="Whisper.net" Version="1.9.1" />
     <PackageReference Include="Whisper.net.Runtime" Version="1.9.1" />
   </ItemGroup>
@@ -24,3 +27,4 @@
     <Content Include="..\PRIVACY.md" Link="PRIVACY.md" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
+

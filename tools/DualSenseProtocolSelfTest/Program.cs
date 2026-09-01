@@ -70,6 +70,47 @@ Assert(!MainWindow.IsSafePasteTarget(
         ownWindow, ownWindow, ownWindow, targetExists: true),
     "Paste must not be sent back into the app itself.");
 
+byte[] modelPayload = Enumerable.Range(0, 4096)
+    .Select(index => (byte)(index % 251))
+    .ToArray();
+using var modelSource = new MemoryStream(modelPayload);
+using var modelDestination = new MemoryStream();
+var reportedProgress = new List<int>();
+long copied = await MainWindow.CopyModelWithProgressAsync(
+    modelSource,
+    modelDestination,
+    modelPayload.Length,
+    reportedProgress.Add,
+    CancellationToken.None,
+    bufferSize: 127);
+Assert(copied == modelPayload.Length &&
+       modelDestination.ToArray().SequenceEqual(modelPayload),
+    "Model copy should preserve every byte.");
+Assert(reportedProgress.First() == 0 && reportedProgress.Last() == 100 &&
+       reportedProgress.SequenceEqual(reportedProgress.Distinct()),
+    "Model copy progress should start at zero and increase to 100 without duplicates.");
+using var canceledCopy = new CancellationTokenSource();
+canceledCopy.Cancel();
+using var canceledSource = new MemoryStream(modelPayload);
+using var canceledDestination = new MemoryStream();
+await AssertCanceled(async () =>
+    await MainWindow.CopyModelWithProgressAsync(
+        canceledSource,
+        canceledDestination,
+        modelPayload.Length,
+        reportProgress: null,
+        cancellationToken: canceledCopy.Token,
+        bufferSize: 127));
+Assert(MainWindow.GetModelDownloadErrorMessage(new HttpRequestException())
+        .Contains("ネットワーク接続", StringComparison.Ordinal),
+    "Network download errors should give a Japanese recovery instruction.");
+Assert(MainWindow.GetModelDownloadErrorMessage(new IOException())
+        .Contains("空き容量", StringComparison.Ordinal),
+    "File download errors should give a Japanese storage instruction.");
+Assert(MainWindow.GetModelDownloadErrorMessage(new InvalidDataException())
+        .Contains("検証", StringComparison.Ordinal),
+    "Integrity failures should give a Japanese retry instruction.");
+
 string cleanupRoot = Path.Combine(
     Path.GetTempPath(),
     $"DualSenseVoiceSelfTest-{Guid.NewGuid():N}");
@@ -113,9 +154,21 @@ finally
 }
 
 Console.WriteLine(
-    "PASS|Bluetooth/USB parsing, status cues, model recovery, paste safety, and interrupted-file cleanup");
+    "PASS|Bluetooth/USB parsing, status cues, model download/recovery, paste safety, and interrupted-file cleanup");
 
 static void Assert(bool condition, string message)
 {
     if (!condition) throw new InvalidOperationException(message);
+}
+
+static async Task AssertCanceled(Func<Task> action)
+{
+    try
+    {
+        await action();
+        throw new InvalidOperationException("The canceled operation unexpectedly completed.");
+    }
+    catch (OperationCanceledException)
+    {
+    }
 }

@@ -18,7 +18,7 @@
   </Border>
   <Border Grid.Row="2" Background="{DynamicResource Surface}" CornerRadius="14" Padding="18" Margin="0,0,0,14">
    <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-    <StackPanel><TextBlock x:Name="ModelLabel" Text="認識モデル" Foreground="{DynamicResource Muted}"/><TextBlock x:Name="ModelStatus" Text="未確認" FontSize="15" Margin="0,5,0,0" AutomationProperties.LiveSetting="Polite"/><ProgressBar x:Name="ModelProgress" Height="4" Margin="0,9,0,0" IsIndeterminate="True" Visibility="Collapsed" Foreground="{DynamicResource Accent}" Background="{DynamicResource Secondary}" AutomationProperties.Name="認識モデルをダウンロード中"/></StackPanel>
+    <StackPanel><TextBlock x:Name="ModelLabel" Text="認識モデル" Foreground="{DynamicResource Muted}"/><TextBlock x:Name="ModelStatus" Text="未確認" FontSize="15" Margin="0,5,0,0" AutomationProperties.LiveSetting="Polite"/><ProgressBar x:Name="ModelProgress" Height="4" Margin="0,9,0,0" Minimum="0" Maximum="100" IsIndeterminate="True" Visibility="Collapsed" Foreground="{DynamicResource Accent}" Background="{DynamicResource Secondary}" AutomationProperties.Name="認識モデルをダウンロード中"/></StackPanel>
     <Button Grid.Column="1" x:Name="DownloadButton" Content="モデルを準備" Click="Download_Click" AutomationProperties.LabeledBy="{Binding ElementName=ModelLabel}" AutomationProperties.HelpText="初回に日本語音声認識モデルをダウンロードして検証します"/>
    </Grid>
   </Border>

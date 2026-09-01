@@ -1,4 +1,5 @@
 using System.IO;
+using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Windows;
@@ -28,10 +29,12 @@ public partial class MainWindow : Window
     WasapiCapture? windowsCapture;
     WaveFileWriter? windowsWriter;
     TaskCompletionSource? windowsCaptureStopped;
+    CancellationTokenSource? modelDownloadCancellation;
     string? recordingPath;
     IntPtr previousWindow;
     bool busy;
     bool suppressDeviceSelection;
+    bool windowClosed;
     bool? modelIsValid;
 
     bool IsRecording =>
@@ -84,6 +87,8 @@ public partial class MainWindow : Window
         };
         Closed += (_, _) =>
         {
+            windowClosed = true;
+            modelDownloadCancellation?.Cancel();
             recordingTimer.Stop();
             connectionTimer.Stop();
             StopWindowsCaptureImmediately();
@@ -638,43 +643,141 @@ public partial class MainWindow : Window
 
     async void Download_Click(object sender, RoutedEventArgs e)
     {
+        using var cancellation = new CancellationTokenSource();
+        modelDownloadCancellation = cancellation;
         DownloadButton.IsEnabled = false;
+        ModelProgress.Value = 0;
+        ModelProgress.IsIndeterminate = true;
         ModelProgress.Visibility = Visibility.Visible;
-        SetModelStatus("モデルをダウンロード中…");
+        SetModelStatus("認識モデルへ接続中…");
         string temporaryPath = ModelPath + ".download";
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(ModelPath)!);
-            if (File.Exists(temporaryPath)) File.Delete(temporaryPath);
+            TryDeleteFile(temporaryPath);
             await using (var model =
-                         await WhisperGgmlDownloader.Default.GetGgmlModelAsync(GgmlType.Base))
-            await using (var file = File.Create(temporaryPath))
-                await model.CopyToAsync(file);
+                         await WhisperGgmlDownloader.Default.GetGgmlModelAsync(
+                             GgmlType.Base,
+                             cancellationToken: cancellation.Token))
+            await using (var file = new FileStream(
+                             temporaryPath,
+                             FileMode.CreateNew,
+                             FileAccess.Write,
+                             FileShare.None,
+                             bufferSize: 81920,
+                             useAsync: true))
+            {
+                ModelProgress.IsIndeterminate = false;
+                int lastAnnouncedPercent = -10;
+                void ReportProgress(int percent)
+                {
+                    ModelProgress.Value = percent;
+                    if (percent == 100 || percent >= lastAnnouncedPercent + 10)
+                    {
+                        lastAnnouncedPercent = percent;
+                        SetModelStatus($"認識モデルをダウンロード中… {percent}%");
+                    }
+                }
+                await CopyModelWithProgressAsync(
+                    model,
+                    file,
+                    ExpectedModelLength,
+                    ReportProgress,
+                    cancellation.Token);
+                await file.FlushAsync(cancellation.Token);
+            }
 
+            ModelProgress.IsIndeterminate = true;
+            SetModelStatus("認識モデルを検証中…");
             await using (var downloaded = File.OpenRead(temporaryPath))
             {
-                byte[] hash = await SHA256.HashDataAsync(downloaded);
+                byte[] hash = await SHA256.HashDataAsync(
+                    downloaded,
+                    cancellation.Token);
                 if (!IsExpectedModel(downloaded.Length, hash))
                     throw new InvalidDataException(
                         "モデルのサイズまたはSHA-256が正規ファイルと一致しません。");
             }
+            cancellation.Token.ThrowIfCancellationRequested();
             File.Move(temporaryPath, ModelPath, true);
             modelIsValid = true;
             UpdateModelState();
             SetStatus("ミュート中 — DualSenseのマイクボタンで音声入力を開始");
         }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            TryDeleteFile(temporaryPath);
+            modelIsValid = null;
+            if (!windowClosed)
+            {
+                SetModelStatus("認識モデルのダウンロードを中止しました。");
+                DownloadButton.IsEnabled = true;
+            }
+        }
         catch (Exception ex)
         {
-            if (File.Exists(temporaryPath)) File.Delete(temporaryPath);
+            TryDeleteFile(temporaryPath);
             modelIsValid = null;
-            SetModelStatus($"ダウンロード失敗: {ex.Message}");
-            DownloadButton.IsEnabled = true;
+            if (!windowClosed)
+            {
+                SetModelStatus(GetModelDownloadErrorMessage(ex));
+                DownloadButton.IsEnabled = true;
+            }
         }
         finally
         {
-            ModelProgress.Visibility = Visibility.Collapsed;
+            if (ReferenceEquals(modelDownloadCancellation, cancellation))
+                modelDownloadCancellation = null;
+            if (!windowClosed)
+                ModelProgress.Visibility = Visibility.Collapsed;
         }
     }
+
+    internal static async Task<long> CopyModelWithProgressAsync(
+        Stream source,
+        Stream destination,
+        long expectedLength,
+        Action<int>? reportProgress,
+        CancellationToken cancellationToken,
+        int bufferSize = 81920)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(expectedLength);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(bufferSize);
+
+        byte[] buffer = GC.AllocateUninitializedArray<byte>(bufferSize);
+        long total = 0;
+        int lastPercent = 0;
+        reportProgress?.Invoke(0);
+        while (true)
+        {
+            int read = await source.ReadAsync(buffer, cancellationToken);
+            if (read == 0) break;
+            await destination.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+            total += read;
+            int percent = (int)Math.Min(100, total * 100d / expectedLength);
+            if (percent != lastPercent)
+            {
+                lastPercent = percent;
+                reportProgress?.Invoke(percent);
+            }
+        }
+        return total;
+    }
+
+    internal static string GetModelDownloadErrorMessage(Exception error) => error switch
+    {
+        InvalidDataException =>
+            "取得した認識モデルを検証できませんでした。もう一度お試しください。",
+        HttpRequestException =>
+            "認識モデルへ接続できませんでした。ネットワーク接続を確認してください。",
+        TaskCanceledException =>
+            "認識モデルの通信がタイムアウトしました。もう一度お試しください。",
+        UnauthorizedAccessException =>
+            "認識モデルを保存できませんでした。Windowsのアクセス許可を確認してください。",
+        IOException =>
+            "認識モデルを保存できませんでした。空き容量を確認して、もう一度お試しください。",
+        _ => $"認識モデルを準備できませんでした: {error.Message}",
+    };
 
     void DeviceBox_SelectionChanged(
         object sender,

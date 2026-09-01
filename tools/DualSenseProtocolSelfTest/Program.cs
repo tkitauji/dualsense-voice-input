@@ -70,8 +70,50 @@ Assert(!MainWindow.IsSafePasteTarget(
         ownWindow, ownWindow, ownWindow, targetExists: true),
     "Paste must not be sent back into the app itself.");
 
+string cleanupRoot = Path.Combine(
+    Path.GetTempPath(),
+    $"DualSenseVoiceSelfTest-{Guid.NewGuid():N}");
+Directory.CreateDirectory(cleanupRoot);
+try
+{
+    string interruptedRecording = Path.Combine(
+        cleanupRoot,
+        $"DualSenseVoice-{Guid.NewGuid():N}.wav");
+    string unrelatedWave = Path.Combine(cleanupRoot, "DualSenseVoice-not-a-guid.wav");
+    string modelPath = Path.Combine(cleanupRoot, "ggml-base.bin");
+    string interruptedDownload = modelPath + ".download";
+    File.WriteAllText(interruptedRecording, "temporary audio");
+    File.WriteAllText(unrelatedWave, "must remain");
+    File.WriteAllText(modelPath, "installed model");
+    File.WriteAllText(interruptedDownload, "partial model");
+
+    int cleaned = MainWindow.CleanupInterruptedFiles(cleanupRoot, modelPath);
+    Assert(cleaned == 2,
+        "Cleanup should remove one app recording and one partial model.");
+    Assert(!File.Exists(interruptedRecording) && !File.Exists(interruptedDownload),
+        "Interrupted app files should be removed.");
+    Assert(File.Exists(unrelatedWave) && File.Exists(modelPath),
+        "Cleanup must preserve unrelated WAV data and the installed model.");
+
+    string lockedModel = Path.Combine(cleanupRoot, "locked-model.bin");
+    File.WriteAllText(lockedModel, "locked");
+    using (var lockStream = new FileStream(
+               lockedModel,
+               FileMode.Open,
+               FileAccess.ReadWrite,
+               FileShare.None))
+    {
+        Assert(!MainWindow.ValidateModelFile(lockedModel),
+            "A locked model should be treated as invalid without crashing startup.");
+    }
+}
+finally
+{
+    Directory.Delete(cleanupRoot, recursive: true);
+}
+
 Console.WriteLine(
-    "PASS|Bluetooth/USB button parsing, status-cue WAV, model integrity, and paste-target safety");
+    "PASS|Bluetooth/USB parsing, status cues, model recovery, paste safety, and interrupted-file cleanup");
 
 static void Assert(bool condition, string message)
 {

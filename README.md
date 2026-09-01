@@ -78,5 +78,6 @@ Partner Centerの制限付き機能の説明には、`runFullTrust`を「DualSen
 - Steam、DS4Windows、DSXなどが同じコントローラーへ出力していると音声クロックが競合する場合があります。録音できない場合は、それらを終了して「再読込」してください。
 - 配布物には、モデル・Whisper.net・NAudio・Concentus・HidSharp・.NETランタイムのライセンス本文と第三者通知を`Licenses`フォルダーへ同梱します。
 - 初回取得するWhisper baseモデルは、ファイル長とSHA-256を検証してから保存します。
+- 異常終了で本アプリ固有の一時WAVまたは未完了のモデル取得ファイルが残った場合は、次回起動時に対象名を厳密に確認して削除を再試行します。ほかの一時ファイルや正常なモデルは削除しません。
 
 Bluetooth相互運用のワイヤ形式は、[LinuxAudio4Dualsense5](https://github.com/GeorgLegato/LinuxAudio4Dualsense5)および[DS4WindowsのBluetooth audio実装](https://github.com/hbashton/DS4Windows/blob/main/docs/dualsense-bluetooth-audio-haptics.md)で公開されている観測結果と実機挙動を照合しています。これらのプロジェクトのバイナリやドライバーは本アプリへ組み込みません。

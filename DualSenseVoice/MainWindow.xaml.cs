@@ -44,11 +44,24 @@ public partial class MainWindow : Window
 
     bool HasValidModel => modelIsValid ??= ValidateStoredModel();
 
-    bool ValidateStoredModel()
+    bool ValidateStoredModel() => ValidateModelFile(ModelPath);
+
+    internal static bool ValidateModelFile(string path)
     {
-        if (!File.Exists(ModelPath)) return false;
-        using FileStream model = File.OpenRead(ModelPath);
-        return IsExpectedModel(model.Length, SHA256.HashData(model));
+        try
+        {
+            if (!File.Exists(path)) return false;
+            using FileStream model = File.OpenRead(path);
+            return IsExpectedModel(model.Length, SHA256.HashData(model));
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false;
+        }
     }
 
     internal static bool IsExpectedModel(long length, ReadOnlySpan<byte> sha256) =>
@@ -64,6 +77,7 @@ public partial class MainWindow : Window
         connectionTimer.Tick += ConnectionTimer_Tick;
         Loaded += (_, _) =>
         {
+            CleanupInterruptedFiles(Path.GetTempPath(), ModelPath);
             UpdateModelState();
             RefreshDevices();
             connectionTimer.Start();
@@ -478,9 +492,62 @@ public partial class MainWindow : Window
 
     void DeleteRecordingFile()
     {
-        if (recordingPath is not null && File.Exists(recordingPath))
-            File.Delete(recordingPath);
+        TryDeleteFile(recordingPath);
         recordingPath = null;
+    }
+
+    internal static int CleanupInterruptedFiles(
+        string temporaryDirectory,
+        string modelPath)
+    {
+        int deleted = 0;
+        try
+        {
+            foreach (string path in Directory.EnumerateFiles(
+                         temporaryDirectory,
+                         "DualSenseVoice-*.wav",
+                         SearchOption.TopDirectoryOnly))
+            {
+                string stem = Path.GetFileNameWithoutExtension(path);
+                const string prefix = "DualSenseVoice-";
+                if (stem.StartsWith(prefix, StringComparison.Ordinal) &&
+                    Guid.TryParseExact(stem[prefix.Length..], "N", out _) &&
+                    TryDeleteFile(path))
+                    deleted++;
+            }
+        }
+        catch (DirectoryNotFoundException)
+        {
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
+
+        if (TryDeleteFile(modelPath + ".download"))
+            deleted++;
+        return deleted;
+    }
+
+    static bool TryDeleteFile(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return false;
+        try
+        {
+            if (!File.Exists(path)) return false;
+            File.Delete(path);
+            return true;
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false;
+        }
     }
 
     async Task<AutomaticPasteResult> PasteToPreviousWindowAsync()

@@ -1,5 +1,10 @@
 using System.Runtime.InteropServices;
+using System.Diagnostics;
 using DualSenseVoice;
+
+if (Process.GetProcessesByName("DualSenseVoice").Length > 0)
+    throw new InvalidOperationException(
+        "Close DualSense Voice before running the interference probe; two microphone clocks must not write to one controller.");
 
 var joysticks = new List<(uint Id, string Name)>();
 for (uint id = 0; id < NativeMethods.joyGetNumDevs(); id++)

@@ -30,6 +30,7 @@ Environment: Windows 11 x64 (10.0.26200), .NET SDK 8.0.424
 - Self-contained application startup after the physical-button and auto-reconnect changes: stayed running for 5 seconds with the Bluetooth DualSense connected, then closed cleanly with exit code 0.
 - Development MSIX rebuild under Windows PowerShell 5.1: succeeded after explicit UTF-8 manifest handling; MakeAppx unpacked the resulting package successfully.
 - Protocol self-test: Bluetooth button press/release, Bluetooth audio-report exclusion, USB button press/release, and transport-layout separation all passed.
+- Single-instance test: a second launch exited with code 0, left exactly the original process running, and the original process then closed cleanly with code 0. This prevents two app instances from writing competing Bluetooth microphone clocks.
 
 ## Not available in this environment
 
